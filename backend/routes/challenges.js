@@ -16,6 +16,8 @@ const getEndDate = (startDate, type, value) => {
   return date;
 };
 
+const formatUser = (user) => user.name || user.email;
+
 router.post('/', auth, async (req, res) => {
   try {
     const { title, description, apps, durationType, durationValue } = req.body;
@@ -72,7 +74,7 @@ router.post('/:inviteCode/respond', auth, async (req, res) => {
   await Notification.create({
     user: challenge.creator,
     challenge: challenge._id,
-    message: `${req.user.name || req.user.email} ${accepted ? 'accepted' : 'rejected'} your challenge`,
+    message: `${formatUser(req.user)} ${accepted ? 'accepted' : 'rejected'} your challenge`,
     actorName: req.user.name,
     actorEmail: req.user.email,
     type: 'challenge',
@@ -82,11 +84,57 @@ router.post('/:inviteCode/respond', auth, async (req, res) => {
 });
 
 router.post('/:id/complete', auth, async (req, res) => {
-  const challenge = await Challenge.findById(req.params.id);
+  const challenge = await Challenge.findById(req.params.id).populate('participants.user');
   if (!challenge) return res.status(404).json({ message: 'Challenge not found' });
-  challenge.status = 'completed';
-  challenge.analytics = req.body.analytics || challenge.analytics;
-  await challenge.save();
+  
+  if (challenge.status !== 'completed') {
+    challenge.status = 'completed';
+    challenge.analytics = req.body.analytics || challenge.analytics;
+    
+    // Sort participants by lowest usage first
+    const sorted = [...challenge.participants].sort((a, b) => (a.usageSeconds || 0) - (b.usageSeconds || 0));
+    const winner = sorted[0];
+    
+    // Calculate days
+    let days = 1;
+    if (challenge.durationType === 'week') days = 7;
+    else if (challenge.durationType === 'month') days = 30;
+    else if (challenge.durationType === 'custom') days = challenge.durationValue || 7;
+    
+    // 10 credits per day
+    const creditsToAward = days * 10;
+    
+    const participantIds = challenge.participants.map(p => p.user._id);
+    await User.updateMany(
+      { _id: { $in: participantIds } },
+      { $inc: { credits: creditsToAward } }
+    );
+    
+    await challenge.save();
+
+    // Send notifications to everyone
+    if (winner && winner.user) {
+      const winnerName = formatUser(winner.user);
+      const winnerTime = `${Math.floor((winner.usageSeconds || 0) / 60)}m ${(winner.usageSeconds || 0) % 60}s`;
+
+      await Promise.all(challenge.participants.map(p => {
+        const pTime = `${Math.floor((p.usageSeconds || 0) / 60)}m ${(p.usageSeconds || 0) % 60}s`;
+        const message = p.user._id.toString() === winner.user._id.toString()
+          ? `🏆 You won the challenge ${challenge.title} with only ${winnerTime} of usage! +${creditsToAward} credits.`
+          : `Challenge ${challenge.title} finished! 🏆 ${winnerName} won with ${winnerTime}. You had ${pTime}. +${creditsToAward} credits.`;
+
+        return Notification.create({
+          user: p.user._id,
+          challenge: challenge._id,
+          message,
+          actorName: 'FocusFight System',
+          actorEmail: 'system@focusfight.com',
+          type: 'challenge',
+        }).catch(() => null);
+      }));
+    }
+  }
+  
   return res.json({ challenge });
 });
 
@@ -106,7 +154,7 @@ router.delete('/:id', auth, async (req, res) => {
         Notification.create({
           user: userId,
           challenge: challenge._id,
-          message: `The challenge ${challenge.title} was deleted by ${req.user.name || req.user.email}.`,
+          message: `The challenge ${challenge.title} was deleted by ${formatUser(req.user)}.`,
           actorName: req.user.name,
           actorEmail: req.user.email,
           type: 'challenge',
@@ -126,7 +174,7 @@ router.delete('/:id', auth, async (req, res) => {
       Notification.create({
         user: userId,
         challenge: challenge._id,
-        message: `${leavingUser.name || leavingUser.email} left the challenge ${challenge.title}.`,
+        message: `${formatUser(leavingUser)} left the challenge ${challenge.title}.`,
         actorName: leavingUser.name,
         actorEmail: leavingUser.email,
         type: 'challenge',
@@ -150,7 +198,7 @@ router.post('/:id/remove/:participantId', auth, async (req, res) => {
     challenge.participants = challenge.participants.filter((p) => p.user.toString() !== req.params.participantId);
     await challenge.save();
 
-    const creatorName = req.user.name || req.user.email;
+    const creatorName = formatUser(req.user);
     const removedUser = await User.findById(req.params.participantId);
 
     await Notification.create({
@@ -168,7 +216,7 @@ router.post('/:id/remove/:participantId', auth, async (req, res) => {
         Notification.create({
           user: p.user,
           challenge: challenge._id,
-          message: `${removedUser?.name || removedUser?.email || 'A participant'} was removed from ${challenge.title}.`,
+          message: `${removedUser ? formatUser(removedUser) : 'A participant'} was removed from ${challenge.title}.`,
           actorName: req.user.name,
           actorEmail: req.user.email,
           type: 'challenge',

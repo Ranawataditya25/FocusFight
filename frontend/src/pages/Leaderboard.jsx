@@ -31,13 +31,10 @@ const Leaderboard = () => {
     });
 
     const list = Object.values(userMap).map((u) => {
-      const avgMinutes = Math.floor((u.totalUsage / u.count) / 60);
-      const score = Math.max(0, 100 - avgMinutes);
-      const credit = Math.max(0, score * 2);
-      return { ...u, score, credit };
+      return { ...u, totalSeconds: u.totalUsage };
     });
 
-    list.sort((a, b) => b.score - a.score);
+    list.sort((a, b) => a.totalSeconds - b.totalSeconds);
 
     return list.map((item, index) => ({ ...item, rank: index + 1 }));
   }, [challenges]);
@@ -60,9 +57,10 @@ const Leaderboard = () => {
               <div key={item.rank} className="flex items-center justify-between rounded-3xl bg-slate-50 p-5 dark:bg-slate-900">
                 <div>
                   <p className="text-xl font-semibold text-slate-900 dark:text-white">#{item.rank} {item.name}</p>
-                  <p className="text-sm text-slate-600 dark:text-slate-400">Score: {item.score}</p>
                 </div>
-                <div className="rounded-3xl bg-brand-500/10 px-4 py-2 text-sm font-medium text-brand-600 dark:text-brand-300">+{item.credit} credits</div>
+                <div className="rounded-3xl bg-brand-500/10 px-4 py-2 text-sm font-medium text-brand-600 dark:text-brand-300">
+                  {Math.floor(item.totalSeconds / 60)} min {item.totalSeconds % 60} sec
+                </div>
               </div>
             ))}
           </div>

@@ -25,9 +25,17 @@ router.post('/sync', auth, async (req, res) => {
   await UsageRecord.insertMany(docs);
 
   const totals = await UsageRecord.aggregate([
-    { $match: { challenge: challenge._id, user: challenge.creator } },
+    { $match: { challenge: challenge._id, user: req.user._id } },
     { $group: { _id: '$user', totalSeconds: { $sum: '$secondsUsed' } } },
   ]);
+
+  const totalSeconds = totals[0]?.totalSeconds || 0;
+  
+  // Update the participant's usageSeconds in the Challenge document
+  await Challenge.updateOne(
+    { _id: challenge._id, 'participants.user': req.user._id },
+    { $set: { 'participants.$.usageSeconds': totalSeconds } }
+  );
 
   return res.json({ message: 'Usage synced', totals });
 });

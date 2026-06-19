@@ -41,6 +41,12 @@ const Login = ({ onAuth, theme, toggleTheme }) => {
   return (
     <div className="flex flex-1 flex-col justify-center my-auto py-12">
       <div className="relative mx-auto w-full max-w-md rounded-3xl border border-slate-200 bg-white p-4 sm:p-8 shadow-soft dark:border-slate-800 dark:bg-slate-900/90">
+        <Link to="/" className="mb-6 inline-flex items-center text-sm font-medium text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="mr-1 h-4 w-4">
+            <path d="M19 12H5M12 19l-7-7 7-7" />
+          </svg>
+          Back
+        </Link>
         <div className="flex items-start justify-between gap-4">
           <div>
             <h1 className="text-3xl font-semibold text-slate-900 dark:text-white">
@@ -56,6 +62,7 @@ const Login = ({ onAuth, theme, toggleTheme }) => {
           >
             {theme === 'dark' ? (
               <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="5" />
                 <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
               </svg>
             ) : (
@@ -66,25 +73,27 @@ const Login = ({ onAuth, theme, toggleTheme }) => {
           </button>
         </div>
       <form onSubmit={handleSubmit} className="mt-8 space-y-5">
-        <label className="block space-y-2 text-sm text-slate-700 dark:text-slate-200">
-          Email
+        <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">
+          Email address
           <input
             value={form.email}
             onChange={(e) => setForm({ ...form, email: e.target.value })}
             type="email"
+            placeholder="you@example.com"
             required
-            className="w-full rounded-3xl border border-slate-300 bg-slate-50 px-4 py-3 text-slate-900 outline-none transition focus:border-brand-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+            className="mt-2 w-full rounded-3xl border border-slate-300 bg-slate-50 px-4 py-3 text-slate-900 outline-none transition focus:border-brand-500 focus:ring-1 focus:ring-brand-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
           />
         </label>
-        <label className="block relative space-y-2 text-sm text-slate-700 dark:text-slate-200">
+        <label className="block relative text-sm font-medium text-slate-700 dark:text-slate-200">
           Password
-          <div className="relative">
+          <div className="relative mt-2">
             <input
               value={form.password}
               onChange={(e) => setForm({ ...form, password: e.target.value })}
               type={showPassword ? 'text' : 'password'}
+              placeholder="••••••••"
               required
-              className="w-full rounded-3xl border border-slate-300 bg-slate-50 px-4 py-3 pr-12 text-slate-900 outline-none transition focus:border-brand-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+              className="w-full rounded-3xl border border-slate-300 bg-slate-50 px-4 py-3 pr-16 text-slate-900 outline-none transition focus:border-brand-500 focus:ring-1 focus:ring-brand-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
             />
             <button
               type="button"

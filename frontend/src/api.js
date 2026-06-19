@@ -35,6 +35,7 @@ export const challengeApi = {
   respond: (inviteCode, accepted) => request(`/challenges/${inviteCode}/respond`, { method: 'POST', body: { accepted } }),
   delete: (id) => request(`/challenges/${id}`, { method: 'DELETE' }),
   removeParticipant: (id, participantId) => request(`/challenges/${id}/remove/${participantId}`, { method: 'POST' }),
+  complete: (id) => request(`/challenges/${id}/complete`, { method: 'POST' }),
 };
 
 export const inviteApi = {

@@ -13,7 +13,10 @@ const app = express();
 
 connectDB();
 app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:5173',
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps) or any origin dynamically
+    return callback(null, origin || true);
+  },
   credentials: true,
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));

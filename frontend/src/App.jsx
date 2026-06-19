@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Routes, Route, useNavigate } from 'react-router-dom';
+import { App as CapacitorApp } from '@capacitor/app';
 import Landing from './pages/Landing';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -44,6 +45,19 @@ function App() {
       setUnreadCount(0);
     }
   };
+
+  useEffect(() => {
+    CapacitorApp.addListener('backButton', ({ canGoBack }) => {
+      if (!canGoBack) {
+        CapacitorApp.exitApp();
+      } else {
+        window.history.back();
+      }
+    });
+    return () => {
+      CapacitorApp.removeAllListeners();
+    };
+  }, []);
 
   useEffect(() => {
     const token = getToken();

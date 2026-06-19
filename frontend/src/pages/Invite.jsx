@@ -47,8 +47,23 @@ const InvitePage = () => {
         <p className="text-sm uppercase tracking-[0.2em] text-slate-400">Challenge</p>
         <h2 className="text-2xl font-semibold text-white">{challenge.title}</h2>
         <p className="text-slate-300">Tracking: {challenge.apps.join(', ')}</p>
-        <p className="text-slate-400">Ends: {new Date(challenge.endDate).toLocaleString()}</p>
+        <p className="text-slate-400">
+          Ends: {challenge.status === 'pending' ? 'Starts when you join' : new Date(challenge.endDate).toLocaleString()}
+        </p>
+        <p className="text-slate-400">
+          Duration: {challenge.durationType === 'custom' ? `${challenge.durationValue} days` : challenge.durationType === 'week' ? '7 days' : challenge.durationType === 'month' ? '30 days' : '1 day'}
+        </p>
         <p className="text-sm text-slate-500">Created by {challenge.creator?.name || challenge.creator?.email}</p>
+        <div className="pt-2 border-t border-slate-800">
+          <p className="text-sm text-slate-400">Participants ({challenge.participants.length})</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {challenge.participants.map((p, idx) => (
+              <span key={idx} className="rounded-full bg-slate-800 px-3 py-1 text-xs text-slate-300">
+                {p.user?.name || 'A player'}
+              </span>
+            ))}
+          </div>
+        </div>
       </div>
       {isCreator ? (
         <div className="mt-8 rounded-3xl border border-slate-700 bg-slate-950 p-6 text-slate-200">

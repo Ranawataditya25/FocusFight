@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { challengeApi } from '../api';
 import { appOptions, AppIcon } from '../components/AppIcon';
+import { Clipboard } from '@capacitor/clipboard';
 
 const durationOptions = [
   { label: '1 Day', value: 'day', durationValue: 1 },
@@ -25,6 +26,7 @@ const CreateChallenge = () => {
   const [shareLink, setShareLink] = useState('');
   const [showMoreApps, setShowMoreApps] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [copied, setCopied] = useState(false);
   const submitRef = useRef(false);
   const createdRef = useRef(null);
 
@@ -67,9 +69,8 @@ const CreateChallenge = () => {
         durationValue: state.durationValue,
       };
       const result = await challengeApi.create(payload);
-      const inviteUrl = `${window.location.origin}/invite/${result.challenge.inviteCode}`;
       setCreatedChallenge(result.challenge);
-      setShareLink(inviteUrl);
+      setShareLink(result.challenge.inviteCode);
       setSubmitted(true);
       setError('');
     } catch (err) {
@@ -155,8 +156,8 @@ const CreateChallenge = () => {
           </div>
 
           <div className="space-y-6">
-            <label className="block space-y-2 text-sm text-slate-700 dark:text-slate-200">
-              Challenge title
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">
+              <span className="mb-2 block">Challenge title</span>
               <input
                 value={state.title}
                 onChange={(e) => setState({ ...state, title: e.target.value })}
@@ -166,8 +167,8 @@ const CreateChallenge = () => {
               />
             </label>
 
-            <label className="block space-y-2 text-sm text-slate-700 dark:text-slate-200">
-              Description
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">
+              <span className="mb-2 block">Description</span>
               <textarea
                 value={state.description}
                 onChange={(e) => setState({ ...state, description: e.target.value })}
@@ -177,8 +178,8 @@ const CreateChallenge = () => {
               />
             </label>
 
-            <label className="block space-y-2 text-sm text-slate-700 dark:text-slate-200">
-              Duration
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">
+              <span className="mb-2 block">Duration</span>
               <div className="grid gap-3 sm:grid-cols-2">
                 <select
                   value={state.durationType}
@@ -233,13 +234,13 @@ const CreateChallenge = () => {
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-sm uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400">Invite ready</p>
-              <h2 className="mt-2 text-2xl font-semibold text-slate-900 dark:text-white">Share your challenge link</h2>
-              <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">Copy the link below and send it to anyone you want to join the challenge.</p>
+              <h2 className="mt-2 text-2xl font-semibold text-slate-900 dark:text-white">Share your challenge code</h2>
+              <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">Give this 8-character code to anyone you want to join the challenge.</p>
             </div>
             <button
               type="button"
               onClick={() => navigate(`/challenge/${createdChallenge.inviteCode}`)}
-              className="rounded-3xl border border-slate-300 bg-slate-100 px-5 py-3 text-sm font-semibold text-slate-900 transition hover:bg-slate-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
+              className="rounded-3xl border border-slate-300 bg-slate-100 px-5 py-3 text-sm font-semibold text-slate-900 transition hover:bg-slate-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800 whitespace-nowrap"
             >
               View challenge
             </button>
@@ -249,14 +250,22 @@ const CreateChallenge = () => {
             <input
               readOnly
               value={shareLink}
-              className="w-full rounded-3xl border border-slate-300 bg-slate-50 px-4 py-3 text-slate-900 outline-none dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+              className="w-full rounded-3xl border border-slate-300 bg-slate-50 px-6 py-4 text-center text-xl font-bold tracking-widest text-slate-900 outline-none dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
             />
             <button
               type="button"
-              onClick={() => navigator.clipboard.writeText(shareLink)}
-              className="rounded-3xl bg-brand-500 px-5 py-3 text-sm font-semibold text-white transition hover:bg-brand-400"
+              onClick={async () => {
+                try {
+                  await Clipboard.write({ string: shareLink });
+                  setCopied(true);
+                  setTimeout(() => setCopied(false), 2000);
+                } catch (error) {
+                  console.error(error);
+                }
+              }}
+              className="rounded-3xl bg-brand-500 px-6 py-4 text-sm font-semibold text-white transition hover:bg-brand-400 whitespace-nowrap"
             >
-              Copy link
+              {copied ? 'Copied!' : 'Copy Code'}
             </button>
           </div>
         </div>
