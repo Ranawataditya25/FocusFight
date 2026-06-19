@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">FocusFight</string>
+    <string name="title_activity_main">FocusFight</string>
+    <string name="package_name">com.focusfight.app</string>
+    <string name="custom_url_scheme">com.focusfight.app</string>
+</resources>

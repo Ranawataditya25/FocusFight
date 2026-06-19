@@ -1,0 +1,4 @@
+# Set this to the path of your Android SDK installation on Windows.
+# Copy this file to local.properties and update the path.
+
+sdk.dir=C:\Users\<your-user>\AppData\Local\Android\Sdk
