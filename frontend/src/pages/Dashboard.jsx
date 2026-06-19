@@ -29,7 +29,7 @@ const Dashboard = ({ user }) => {
       </div>
 
       <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-        <StatsCard title="Total challenges" value={challenges.length} meta="Active, pending, etc" />
+        <StatsCard title="Total challenges" value={challenges.length} meta="Active, pending" />
         <StatsCard title="Active challenges" value={challenges.filter((item) => item.status === 'active').length} meta="Currently tracking" />
         <StatsCard title="Total participants" value={challenges.reduce((sum, item) => sum + item.participants.length, 0)} meta="Current joined users" />
         <StatsCard title="Credits available" value={user?.credits ?? 0} meta="Redeem on completion" />

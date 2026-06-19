@@ -20,8 +20,6 @@ router.post('/', auth, async (req, res) => {
   try {
     const { title, description, apps, durationType, durationValue } = req.body;
     const inviteCode = crypto.randomBytes(8).toString('hex');
-    const startDate = new Date();
-    const endDate = getEndDate(startDate, durationType, durationValue);
     const challenge = await Challenge.create({
       title,
       description,
@@ -29,8 +27,6 @@ router.post('/', auth, async (req, res) => {
       apps,
       durationType,
       durationValue,
-      startDate,
-      endDate,
       inviteCode,
       participants: [{ user: req.user.id, accepted: true, joinedAt: new Date() }],
       status: 'pending',
@@ -67,6 +63,8 @@ router.post('/:inviteCode/respond', auth, async (req, res) => {
 
   if (accepted && challenge.status === 'pending') {
     challenge.status = 'active';
+    challenge.startDate = new Date();
+    challenge.endDate = getEndDate(challenge.startDate, challenge.durationType, challenge.durationValue);
   }
 
   await challenge.save();

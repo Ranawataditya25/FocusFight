@@ -1,4 +1,4 @@
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:5000/api';
+const API_BASE = import.meta.env.VITE_API_BASE || (import.meta.env.PROD ? 'https://focusfight.onrender.com/api' : 'http://localhost:5000/api');
 
 const getAuthHeaders = () => {
   const token = localStorage.getItem('focusfight_token');

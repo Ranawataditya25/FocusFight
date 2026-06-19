@@ -85,6 +85,26 @@ function App() {
 
   const toggleTheme = () => setTheme((current) => (current === 'dark' ? 'light' : 'dark'));
 
+  if (loading) {
+    return (
+      <div className="flex min-h-[100dvh] flex-col items-center justify-center bg-slate-50 dark:bg-slate-950">
+        <div className="flex flex-col items-center justify-center gap-6">
+          <div className="relative flex h-20 w-20 items-center justify-center">
+            <div className="absolute h-full w-full animate-[spin_3s_linear_infinite] rounded-full border-[3px] border-dashed border-brand-500/30"></div>
+            <div className="absolute h-16 w-16 animate-[spin_2s_linear_infinite_reverse] rounded-full border-[3px] border-t-transparent border-brand-500/60"></div>
+            <div className="absolute h-12 w-12 animate-[spin_1s_linear_infinite] rounded-full border-[3px] border-brand-500 border-b-transparent border-l-transparent"></div>
+          </div>
+          <div className="flex flex-col items-center gap-2">
+            <h1 className="text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-brand-600 to-brand-400 dark:from-brand-400 dark:to-brand-200">
+              FocusFight
+            </h1>
+            <p className="text-sm font-medium tracking-widest text-slate-500 dark:text-slate-400 uppercase animate-pulse">Loading</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex min-h-[100dvh] flex-col bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
       {user && <TopNav theme={theme} onToggleTheme={toggleTheme} onLogout={handleLogout} />}
