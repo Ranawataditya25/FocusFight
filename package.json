@@ -1,0 +1,14 @@
+{
+  "name": "focusfight",
+  "private": true,
+  "workspaces": ["backend", "frontend"],
+  "scripts": {
+    "install-all": "npm install --workspaces",
+    "dev": "concurrently \"npm --workspace backend run dev\" \"npm --workspace frontend run dev\"",
+    "start-backend": "npm --workspace backend run dev",
+    "start-frontend": "npm --workspace frontend run dev"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

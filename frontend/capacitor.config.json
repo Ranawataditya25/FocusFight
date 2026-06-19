@@ -1,0 +1,6 @@
+{
+  "appId": "com.focusfight.app",
+  "appName": "FocusFight",
+  "webDir": "dist",
+  "bundledWebRuntime": false
+}

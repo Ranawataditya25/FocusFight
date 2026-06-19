@@ -1,0 +1,187 @@
+const express = require('express');
+const crypto = require('crypto');
+const Challenge = require('../models/Challenge');
+const User = require('../models/User');
+const Notification = require('../models/Notification');
+const auth = require('../middleware/auth');
+
+const router = express.Router();
+
+const getEndDate = (startDate, type, value) => {
+  const date = new Date(startDate);
+  if (type === 'day') date.setDate(date.getDate() + 1);
+  if (type === 'week') date.setDate(date.getDate() + 7);
+  if (type === 'month') date.setMonth(date.getMonth() + 1);
+  if (type === 'custom') date.setDate(date.getDate() + (value || 7));
+  return date;
+};
+
+router.post('/', auth, async (req, res) => {
+  try {
+    const { title, description, apps, durationType, durationValue } = req.body;
+    const inviteCode = crypto.randomBytes(8).toString('hex');
+    const startDate = new Date();
+    const endDate = getEndDate(startDate, durationType, durationValue);
+    const challenge = await Challenge.create({
+      title,
+      description,
+      creator: req.user.id,
+      apps,
+      durationType,
+      durationValue,
+      startDate,
+      endDate,
+      inviteCode,
+      participants: [{ user: req.user.id, accepted: true, joinedAt: new Date() }],
+      status: 'pending',
+    });
+    return res.status(201).json({ challenge });
+  } catch (error) {
+    return res.status(500).json({ message: 'Could not create challenge', error: error.message });
+  }
+});
+
+router.get('/', auth, async (req, res) => {
+  const challenges = await Challenge.find({ 'participants.user': req.user.id }).populate('creator participants.user', 'name email');
+  return res.json({ challenges });
+});
+
+router.get('/:inviteCode', auth, async (req, res) => {
+  const challenge = await Challenge.findOne({ inviteCode: req.params.inviteCode }).populate('creator participants.user', 'name email');
+  if (!challenge) return res.status(404).json({ message: 'Challenge not found' });
+  return res.json({ challenge });
+});
+
+router.post('/:inviteCode/respond', auth, async (req, res) => {
+  const { accepted } = req.body;
+  const challenge = await Challenge.findOne({ inviteCode: req.params.inviteCode });
+  if (!challenge) return res.status(404).json({ message: 'Challenge not found' });
+
+  const existing = challenge.participants.find((p) => p.user.toString() === req.user.id);
+  if (existing) {
+    existing.accepted = accepted;
+    existing.joinedAt = new Date();
+  } else {
+    challenge.participants.push({ user: req.user.id, accepted, joinedAt: new Date() });
+  }
+
+  if (accepted && challenge.status === 'pending') {
+    challenge.status = 'active';
+  }
+
+  await challenge.save();
+
+  await Notification.create({
+    user: challenge.creator,
+    challenge: challenge._id,
+    message: `${req.user.name || req.user.email} ${accepted ? 'accepted' : 'rejected'} your challenge`,
+    actorName: req.user.name,
+    actorEmail: req.user.email,
+    type: 'challenge',
+  });
+
+  return res.json({ challenge });
+});
+
+router.post('/:id/complete', auth, async (req, res) => {
+  const challenge = await Challenge.findById(req.params.id);
+  if (!challenge) return res.status(404).json({ message: 'Challenge not found' });
+  challenge.status = 'completed';
+  challenge.analytics = req.body.analytics || challenge.analytics;
+  await challenge.save();
+  return res.json({ challenge });
+});
+
+// Delete challenge or leave challenge
+router.delete('/:id', auth, async (req, res) => {
+  try {
+    const challenge = await Challenge.findById(req.params.id).populate('participants.user', 'name email');
+    if (!challenge) return res.status(404).json({ message: 'Challenge not found' });
+
+    // If creator, delete for everyone
+    if (challenge.creator.toString() === req.user.id) {
+      const participantIds = challenge.participants
+        .map((p) => p.user.toString())
+        .filter((id) => id !== req.user.id);
+
+      await Promise.all(participantIds.map((userId) =>
+        Notification.create({
+          user: userId,
+          challenge: challenge._id,
+          message: `The challenge ${challenge.title} was deleted by ${req.user.name || req.user.email}.`,
+          actorName: req.user.name,
+          actorEmail: req.user.email,
+          type: 'challenge',
+        }).catch(() => null)
+      ));
+
+      await Challenge.findByIdAndDelete(req.params.id);
+      return res.json({ message: 'Challenge deleted' });
+    }
+
+    const leavingUser = req.user;
+    challenge.participants = challenge.participants.filter((p) => p.user._id.toString() !== req.user.id);
+    await challenge.save();
+
+    const remainingParticipantIds = challenge.participants.map((p) => p.user.toString());
+    await Promise.all(remainingParticipantIds.map((userId) =>
+      Notification.create({
+        user: userId,
+        challenge: challenge._id,
+        message: `${leavingUser.name || leavingUser.email} left the challenge ${challenge.title}.`,
+        actorName: leavingUser.name,
+        actorEmail: leavingUser.email,
+        type: 'challenge',
+      }).catch(() => null)
+    ));
+
+    return res.json({ challenge });
+  } catch (error) {
+    return res.status(500).json({ message: 'Could not remove from challenge', error: error.message });
+  }
+});
+
+// Creator removes a participant by id
+router.post('/:id/remove/:participantId', auth, async (req, res) => {
+  try {
+    const challenge = await Challenge.findById(req.params.id);
+    if (!challenge) return res.status(404).json({ message: 'Challenge not found' });
+
+    if (challenge.creator.toString() !== req.user.id) return res.status(403).json({ message: 'Only creator can remove participants' });
+
+    challenge.participants = challenge.participants.filter((p) => p.user.toString() !== req.params.participantId);
+    await challenge.save();
+
+    const creatorName = req.user.name || req.user.email;
+    const removedUser = await User.findById(req.params.participantId);
+
+    await Notification.create({
+      user: req.params.participantId,
+      challenge: challenge._id,
+      message: `You were removed from the challenge ${challenge.title} by ${creatorName}.`,
+      actorName: req.user.name,
+      actorEmail: req.user.email,
+      type: 'challenge',
+    }).catch(() => null);
+
+    await Promise.all(challenge.participants
+      .filter((p) => p.user.toString() !== req.params.participantId)
+      .map((p) =>
+        Notification.create({
+          user: p.user,
+          challenge: challenge._id,
+          message: `${removedUser?.name || removedUser?.email || 'A participant'} was removed from ${challenge.title}.`,
+          actorName: req.user.name,
+          actorEmail: req.user.email,
+          type: 'challenge',
+        }).catch(() => null)
+      )
+    );
+
+    return res.json({ challenge });
+  } catch (error) {
+    return res.status(500).json({ message: 'Could not remove participant', error: error.message });
+  }
+});
+
+module.exports = router;
