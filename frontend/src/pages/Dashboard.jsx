@@ -9,6 +9,7 @@ const Dashboard = ({ user }) => {
   const [challenges, setChallenges] = useState([]);
   const [loading, setLoading] = useState(true);
   const [joinCode, setJoinCode] = useState('');
+  const [joinError, setJoinError] = useState('');
   const [userApps, setUserApps] = useState([]);
   const navigate = useNavigate();
 
@@ -29,10 +30,38 @@ const Dashboard = ({ user }) => {
     }
   };
 
-  const handleJoin = (e) => {
+  const handleJoin = async (e) => {
     e.preventDefault();
+    setJoinError('');
     if (!joinCode.trim()) return;
-    interceptPermission(() => navigate(`/invite/${joinCode.trim()}`));
+
+    // Local validation if user already has it
+    const existing = challenges.find(c => c.inviteCode === joinCode.trim());
+    if (existing) {
+      if (existing.creator._id === user.id) {
+        setJoinError("You are the creator of this challenge.");
+        return;
+      }
+      setJoinError("You have already joined this challenge.");
+      return;
+    }
+
+    try {
+      // Pre-check network validation
+      const res = await challengeApi.getByInviteCode(joinCode.trim());
+      if (!res || !res.challenge) {
+        setJoinError("Invalid code. Challenge not found.");
+        return;
+      }
+      if (res.challenge.status === 'completed') {
+        setJoinError("This challenge has already ended.");
+        return;
+      }
+      
+      interceptPermission(() => navigate(`/invite/${joinCode.trim()}`));
+    } catch (err) {
+      setJoinError("Invalid code. Challenge not found.");
+    }
   };
 
   const handleCreate = (e) => {
@@ -177,6 +206,7 @@ const Dashboard = ({ user }) => {
                   Join
                 </button>
               </form>
+              {joinError && <p className="text-xs font-semibold text-rose-500 dark:text-rose-400">{joinError}</p>}
             </div>
 
             <div className="hidden h-10 w-px bg-slate-200 dark:bg-slate-700 sm:block"></div>

@@ -44,15 +44,17 @@ const ChallengeGroupCard = ({ group, markRead }) => {
                 </div>
                 <div className="flex items-center gap-2">
                   {!item.read && (
-                    <span className="rounded-full bg-brand-500/15 px-3 py-1 text-xs font-semibold text-brand-700 dark:text-brand-100">New</span>
+                    <>
+                      <span className="rounded-full bg-brand-500/15 px-3 py-1 text-xs font-semibold text-brand-700 dark:text-brand-100">New</span>
+                      <button
+                        type="button"
+                        onClick={() => markRead(item._id)}
+                        className="rounded-2xl border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+                      >
+                        Mark read
+                      </button>
+                    </>
                   )}
-                  <button
-                    type="button"
-                    onClick={() => markRead(item._id)}
-                    className="rounded-2xl border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
-                  >
-                    Mark read
-                  </button>
                 </div>
               </div>
             </div>
@@ -89,17 +91,25 @@ const Notifications = ({ onUnreadCountChange }) => {
 
   const markRead = async (id) => {
     try {
+      // Optimistic update to prevent the loading state from unmounting the cards
+      setNotifications(prev => {
+        const updated = prev.map(n => n._id === id ? { ...n, read: true } : n);
+        if (onUnreadCountChange) {
+          onUnreadCountChange(updated.filter(item => !item.read).length);
+        }
+        return updated;
+      });
       await notificationApi.markRead(id);
-      fetchNotifications();
     } catch (error) {
       console.error(error);
+      fetchNotifications(); // revert state if the API fails
     }
   };
 
   const unreadNotifications = notifications.filter((item) => !item.read);
   const grouped = notifications.reduce((acc, item) => {
-    const key = item.challenge?._id || 'general';
-    const title = item.challenge?.title || 'General updates';
+    const title = item.challengeTitle || item.challenge?.title || 'General updates';
+    const key = title; // Group exclusively by the string title to catch deleted challenges
     if (!acc[key]) acc[key] = { title, notifications: [] };
     acc[key].notifications.push(item);
     return acc;

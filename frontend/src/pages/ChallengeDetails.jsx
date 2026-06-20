@@ -136,7 +136,9 @@ const ChallengeDetails = () => {
           </div>
         </div>
 
-        <PrizePoolPreview durationType={challenge.durationType} durationValue={challenge.durationValue} />
+        <div className="mt-6">
+          <PrizePoolPreview durationType={challenge.durationType} durationValue={challenge.durationValue} />
+        </div>
 
         <div className="mt-6 flex flex-wrap gap-3">
           {challenge.apps.map((app) => (

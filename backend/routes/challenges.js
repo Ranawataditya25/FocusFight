@@ -74,6 +74,7 @@ router.post('/:inviteCode/respond', auth, async (req, res) => {
   await Notification.create({
     user: challenge.creator,
     challenge: challenge._id,
+    challengeTitle: challenge.title,
     message: `${formatUser(req.user)} ${accepted ? 'accepted' : 'rejected'} your challenge: ${challenge.title}`,
     actorName: req.user.name,
     actorEmail: req.user.email,
@@ -139,6 +140,7 @@ router.post('/:id/complete', auth, async (req, res) => {
         return Notification.create({
           user: p.user._id,
           challenge: challenge._id,
+          challengeTitle: challenge.title,
           message,
           actorName: 'FocusFight System',
           actorEmail: 'system@focusfight.com',
@@ -167,6 +169,7 @@ router.delete('/:id', auth, async (req, res) => {
         Notification.create({
           user: userId,
           challenge: challenge._id,
+          challengeTitle: challenge.title,
           message: `The challenge ${challenge.title} was deleted by ${formatUser(req.user)}.`,
           actorName: req.user.name,
           actorEmail: req.user.email,
@@ -187,6 +190,7 @@ router.delete('/:id', auth, async (req, res) => {
       Notification.create({
         user: userId,
         challenge: challenge._id,
+        challengeTitle: challenge.title,
         message: `${formatUser(leavingUser)} left the challenge ${challenge.title}.`,
         actorName: leavingUser.name,
         actorEmail: leavingUser.email,
@@ -217,6 +221,7 @@ router.post('/:id/remove/:participantId', auth, async (req, res) => {
     await Notification.create({
       user: req.params.participantId,
       challenge: challenge._id,
+      challengeTitle: challenge.title,
       message: `You were removed from the challenge ${challenge.title} by ${creatorName}.`,
       actorName: req.user.name,
       actorEmail: req.user.email,
@@ -229,6 +234,7 @@ router.post('/:id/remove/:participantId', auth, async (req, res) => {
         Notification.create({
           user: p.user,
           challenge: challenge._id,
+          challengeTitle: challenge.title,
           message: `${removedUser ? formatUser(removedUser) : 'A participant'} was removed from ${challenge.title}.`,
           actorName: req.user.name,
           actorEmail: req.user.email,
