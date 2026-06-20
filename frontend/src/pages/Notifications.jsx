@@ -106,8 +106,6 @@ const Notifications = ({ onUnreadCountChange }) => {
   }, {});
   const challengeGroups = Object.entries(grouped).sort((a, b) => b[1].notifications.filter((item) => !item.read).length - a[1].notifications.filter((item) => !item.read).length);
 
-  };
-
   return (
     <div className="space-y-6">
       <div className="rounded-3xl border border-slate-200 bg-white/90 p-6 shadow-soft backdrop-blur-xl dark:border-slate-700/70 dark:bg-slate-950/85">
