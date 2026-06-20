@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { challengeApi } from '../api';
 import { getToken, getUserFromToken } from '../auth';
+import PrizePoolPreview from '../components/PrizePoolPreview';
 
 const InvitePage = () => {
   const { code } = useParams();
@@ -65,6 +66,11 @@ const InvitePage = () => {
           </div>
         </div>
       </div>
+
+      <div className="mt-8">
+        <PrizePoolPreview durationType={challenge.durationType} durationValue={challenge.durationValue} />
+      </div>
+
       {isCreator ? (
         <div className="mt-8 rounded-3xl border border-slate-700 bg-slate-950 p-6 text-slate-200">
           <p className="text-lg font-semibold">You created this challenge.</p>

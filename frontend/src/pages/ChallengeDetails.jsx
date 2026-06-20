@@ -5,6 +5,7 @@ import { AppIcon } from '../components/AppIcon';
 import { BarChart, Bar, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 import { getUserFromToken } from '../auth';
 import { Clipboard } from '@capacitor/clipboard';
+import PrizePoolPreview from '../components/PrizePoolPreview';
 
 const ChallengeDetails = () => {
   const { code } = useParams();
@@ -42,19 +43,14 @@ const ChallengeDetails = () => {
     return `${s} sec`;
   };
 
-  const chartData = Object.values(records
-    .filter(r => r.user === currentUser.id)
-    .reduce((acc, curr) => {
-      // By checking !acc[curr.appName], we only grab the most recent record (due to backend sort order)
-      // This mathematically bypasses any duplicated data on the old Render backend!
-      if (!acc[curr.appName]) {
-        acc[curr.appName] = { 
-          name: curr.appName, 
-          minutes: Math.floor(curr.secondsUsed / 60) 
-        };
-      }
-      return acc;
-    }, {}));
+  const chartData = challenge ? challenge.apps.map(appName => {
+    // find latest record for this app
+    const record = records.find(r => r.user === currentUser?.id && r.appName === appName);
+    return {
+      name: appName,
+      minutes: record ? Math.floor(record.secondsUsed / 60) : 0
+    };
+  }) : [];
 
   const copyCode = async () => {
     try {
@@ -140,56 +136,8 @@ const ChallengeDetails = () => {
           </div>
         </div>
 
-        {/* Prize Pool Preview */}
-        <div className="mt-6 rounded-3xl border border-brand-500/20 bg-brand-50/50 p-5 dark:border-brand-500/10 dark:bg-brand-500/5">
-          <div className="flex items-center justify-between mb-4">
-            <h4 className="text-sm font-semibold uppercase tracking-[0.15em] text-brand-600 dark:text-brand-400">Prize Pool Breakdown</h4>
-            <span className="rounded-full bg-brand-500 px-3 py-1 text-xs font-bold text-white">
-              {(() => {
-                const days = challenge.durationType === 'week' ? 7 : challenge.durationType === 'month' ? 30 : challenge.durationType === 'day' ? 1 : challenge.durationValue || 7;
-                return days * 10;
-              })()} Credits Total
-            </span>
-          </div>
-          <div className="grid grid-cols-2 gap-3 text-sm lg:grid-cols-4">
-            <div className="flex items-center justify-between rounded-2xl bg-white px-3 py-2 shadow-sm dark:bg-slate-900">
-              <span className="font-medium text-slate-700 dark:text-slate-300">🥇 1st</span>
-              <span className="font-bold text-brand-600 dark:text-brand-400">
-                {(() => {
-                  const days = challenge.durationType === 'week' ? 7 : challenge.durationType === 'month' ? 30 : challenge.durationType === 'day' ? 1 : challenge.durationValue || 7;
-                  return days * 10;
-                })()} cr
-              </span>
-            </div>
-            <div className="flex items-center justify-between rounded-2xl bg-white px-3 py-2 shadow-sm dark:bg-slate-900">
-              <span className="font-medium text-slate-700 dark:text-slate-300">🥈 2nd</span>
-              <span className="font-bold text-slate-900 dark:text-white">
-                {(() => {
-                  const days = challenge.durationType === 'week' ? 7 : challenge.durationType === 'month' ? 30 : challenge.durationType === 'day' ? 1 : challenge.durationValue || 7;
-                  return Math.floor((days * 10) * 0.5);
-                })()} cr
-              </span>
-            </div>
-            <div className="flex items-center justify-between rounded-2xl bg-white px-3 py-2 shadow-sm dark:bg-slate-900">
-              <span className="font-medium text-slate-700 dark:text-slate-300">🥉 3rd</span>
-              <span className="font-bold text-slate-900 dark:text-white">
-                {(() => {
-                  const days = challenge.durationType === 'week' ? 7 : challenge.durationType === 'month' ? 30 : challenge.durationType === 'day' ? 1 : challenge.durationValue || 7;
-                  return Math.floor((days * 10) * 0.25);
-                })()} cr
-              </span>
-            </div>
-            <div className="flex items-center justify-between rounded-2xl bg-white px-3 py-2 shadow-sm dark:bg-slate-900">
-              <span className="font-medium text-slate-700 dark:text-slate-300">Other</span>
-              <span className="font-bold text-slate-500 dark:text-slate-400">
-                {(() => {
-                  const days = challenge.durationType === 'week' ? 7 : challenge.durationType === 'month' ? 30 : challenge.durationType === 'day' ? 1 : challenge.durationValue || 7;
-                  return Math.floor((days * 10) * 0.1);
-                })()} cr
-              </span>
-            </div>
-          </div>
-        </div>
+        <PrizePoolPreview durationType={challenge.durationType} durationValue={challenge.durationValue} />
+
         <div className="mt-6 flex flex-wrap gap-3">
           {challenge.apps.map((app) => (
             <span key={app} className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-100 px-4 py-2 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100">
@@ -238,8 +186,16 @@ const ChallengeDetails = () => {
           <div className="mt-6 h-72 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData} margin={{ top: 20, right: 0, left: -20, bottom: 0 }}>
-                <CartesianGrid stroke="#ced4da" strokeDasharray="4 4" />
-                <XAxis dataKey="name" stroke="#868e96" />
+                <CartesianGrid stroke="#ced4da" strokeDasharray="4 4" strokeOpacity={0.5} />
+                <XAxis 
+                  dataKey="name" 
+                  stroke="#868e96" 
+                  interval={0} 
+                  angle={-45} 
+                  textAnchor="end" 
+                  height={60} 
+                  tick={{ fill: '#868e96', fontSize: 12 }} 
+                />
                 <YAxis stroke="#868e96" />
                 <Tooltip wrapperClassName="bg-white/95 rounded-3xl border border-slate-200 shadow-soft dark:bg-slate-900" />
                 <Bar dataKey="minutes" fill="#3b82f6" radius={[4, 4, 0, 0]} />

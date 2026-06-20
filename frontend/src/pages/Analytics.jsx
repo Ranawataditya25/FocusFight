@@ -42,7 +42,8 @@ const Analytics = () => {
     const avgText = avgHours > 0 ? `${avgHours}h ${remainingMins}m` : `${avgMinutes}m`;
 
     const totalParticipants = challenges.reduce((sum, c) => sum + c.participants.length, 0);
-    const completionRate = challenges.length > 0 ? Math.round((completed / challenges.length) * 100) : 0;
+    const validChallenges = active + completed;
+    const completionRate = validChallenges > 0 ? Math.round((completed / validChallenges) * 100) : 0;
 
     // Build global top performers
     const userMap = {};
@@ -54,6 +55,7 @@ const Analytics = () => {
             userMap[uid] = {
               name: p.user.name || p.user.email,
               usageSeconds: 0,
+              credits: p.user.credits || 0,
             };
           }
           userMap[uid].usageSeconds += p.usageSeconds;
@@ -155,6 +157,7 @@ const Analytics = () => {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="truncate font-semibold text-slate-900 dark:text-white">{user.name}</p>
+                        <p className="mt-0.5 text-xs font-semibold text-brand-600 dark:text-brand-400">{user.credits} Credits Earned</p>
                       </div>
                       <div className="text-right">
                         <p className="text-sm font-bold text-slate-700 dark:text-slate-300">

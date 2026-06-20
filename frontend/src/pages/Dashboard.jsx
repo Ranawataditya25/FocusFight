@@ -42,6 +42,46 @@ const Dashboard = ({ user }) => {
 
   useEffect(() => {
     let mounted = true;
+    // Fetch live usage history for UI
+    const fetchLiveUsage = (activeList) => {
+      import('../utils/usageTracker').then(async ({ getAndroidUsageStats, hasUsagePermission }) => {
+        try {
+          const hasPerm = await hasUsagePermission();
+          if (!hasPerm) return;
+
+          const activeChallenges = activeList.filter(c => c.status === 'active');
+          const earliestStart = activeChallenges.length > 0 
+            ? Math.min(...activeChallenges.map(c => new Date(c.startDate || c.createdAt).getTime()))
+            : null;
+
+          const stats = await getAndroidUsageStats(earliestStart);
+          if (mounted) {
+            const trackedApps = [...new Set(activeChallenges.flatMap(c => c.apps))];
+
+            const processed = trackedApps.map(appName => {
+              const stat = stats ? stats.find(s => s.appName === appName) : null;
+              const totalMinutes = stat ? Math.floor(stat.secondsUsed / 60) : 0;
+              let timeString = `${totalMinutes} min`;
+              if (totalMinutes >= 60) {
+                const hrs = Math.floor(totalMinutes / 60);
+                const mins = totalMinutes % 60;
+                timeString = `${hrs} hr ${mins} min`;
+              }
+              return {
+                name: appName,
+                minutes: totalMinutes,
+                displayTime: timeString
+              };
+            }).sort((a, b) => b.minutes - a.minutes);
+            
+            setUserApps(processed);
+          }
+        } catch (err) {
+          console.error("UI Data Load Error:", err);
+        }
+      });
+    };
+
     const loadData = async () => {
       try {
         let result = await challengeApi.list();
@@ -73,55 +113,15 @@ const Dashboard = ({ user }) => {
 
         if (!mounted) return;
         setChallenges(result.challenges);
+        fetchLiveUsage(result.challenges);
       } catch (err) {
         console.error(err);
       } finally {
         if (mounted) setLoading(false);
       }
     };
+
     loadData();
-
-    // Fetch live usage history for UI
-    const fetchLiveUsage = (activeList = challenges) => {
-      import('../utils/usageTracker').then(async ({ getAndroidUsageStats, hasUsagePermission }) => {
-        try {
-          const hasPerm = await hasUsagePermission();
-          if (!hasPerm) return;
-
-          const activeChallenges = activeList.filter(c => c.status === 'active');
-          const earliestStart = activeChallenges.length > 0 
-            ? Math.min(...activeChallenges.map(c => new Date(c.startDate || c.createdAt).getTime()))
-            : null;
-
-          const stats = await getAndroidUsageStats(earliestStart);
-          if (mounted) {
-            const trackedApps = [...new Set(activeChallenges.flatMap(c => c.apps))];
-
-            const processed = trackedApps.map(appName => {
-              const stat = stats ? stats.find(s => s.appName === appName) : null;
-              const totalMinutes = stat ? Math.floor(stat.secondsUsed / 60) : 0;
-              let timeString = `${totalMinutes} min`;
-              if (totalMinutes >= 60) {
-                const hrs = Math.floor(totalMinutes / 60);
-                const mins = totalMinutes % 60;
-                timeString = `${hrs} hr ${mins} min`;
-              }
-              return {
-                name: appName,
-                minutes: totalMinutes, // Keep for sorting
-                displayTime: timeString
-              };
-            }).sort((a, b) => b.minutes - a.minutes);
-            
-            setUserApps(processed);
-          }
-        } catch (err) {
-          console.error("UI Data Load Error:", err);
-        }
-      });
-    };
-
-    fetchLiveUsage();
 
     // Listen for when the app comes back to the foreground
     const nativeListener = CapacitorApp.addListener('appStateChange', async ({ isActive }) => {

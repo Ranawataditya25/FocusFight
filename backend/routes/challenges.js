@@ -40,7 +40,7 @@ router.post('/', auth, async (req, res) => {
 });
 
 router.get('/', auth, async (req, res) => {
-  const challenges = await Challenge.find({ 'participants.user': req.user.id }).populate('creator participants.user', 'name email');
+  const challenges = await Challenge.find({ 'participants.user': req.user.id }).populate('creator participants.user', 'name email credits');
   return res.json({ challenges });
 });
 
