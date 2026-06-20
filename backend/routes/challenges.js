@@ -101,27 +101,40 @@ router.post('/:id/complete', auth, async (req, res) => {
     else if (challenge.durationType === 'month') days = 30;
     else if (challenge.durationType === 'custom') days = challenge.durationValue || 7;
     
-    // 10 credits per day
-    const creditsToAward = days * 10;
+    const totalPrize = days * 10;
     
-    const participantIds = challenge.participants.map(p => p.user._id);
-    await User.updateMany(
-      { _id: { $in: participantIds } },
-      { $inc: { credits: creditsToAward } }
-    );
+    // Distribute rank-based credits
+    const updates = sorted.map((p, index) => {
+      let creditsToAward = 0;
+      if (index === 0) creditsToAward = totalPrize;
+      else if (index === 1) creditsToAward = Math.floor(totalPrize * 0.5);
+      else if (index === 2) creditsToAward = Math.floor(totalPrize * 0.25);
+      else creditsToAward = Math.floor(totalPrize * 0.1);
+      
+      return User.findByIdAndUpdate(p.user._id, { $inc: { credits: creditsToAward } });
+    });
+    await Promise.all(updates);
     
     await challenge.save();
 
-    // Send notifications to everyone
+    // Send personalized rank notifications
     if (winner && winner.user) {
       const winnerName = formatUser(winner.user);
       const winnerTime = `${Math.floor((winner.usageSeconds || 0) / 60)}m ${(winner.usageSeconds || 0) % 60}s`;
 
-      await Promise.all(challenge.participants.map(p => {
+      await Promise.all(sorted.map((p, index) => {
+        let creditsToAward = 0;
+        if (index === 0) creditsToAward = totalPrize;
+        else if (index === 1) creditsToAward = Math.floor(totalPrize * 0.5);
+        else if (index === 2) creditsToAward = Math.floor(totalPrize * 0.25);
+        else creditsToAward = Math.floor(totalPrize * 0.1);
+
         const pTime = `${Math.floor((p.usageSeconds || 0) / 60)}m ${(p.usageSeconds || 0) % 60}s`;
-        const message = p.user._id.toString() === winner.user._id.toString()
-          ? `🏆 You won the challenge ${challenge.title} with only ${winnerTime} of usage! +${creditsToAward} credits.`
-          : `Challenge ${challenge.title} finished! 🏆 ${winnerName} won with ${winnerTime}. You had ${pTime}. +${creditsToAward} credits.`;
+        let rankText = index === 0 ? '1st' : index === 1 ? '2nd' : index === 2 ? '3rd' : `${index + 1}th`;
+        
+        const message = index === 0
+          ? `🏆 You won 1st place in ${challenge.title} with only ${winnerTime} of usage! +${creditsToAward} credits.`
+          : `Challenge ${challenge.title} finished! You placed ${rankText} with ${pTime}. +${creditsToAward} credits. (Winner: ${winnerName} with ${winnerTime})`;
 
         return Notification.create({
           user: p.user._id,
@@ -147,7 +160,7 @@ router.delete('/:id', auth, async (req, res) => {
     // If creator, delete for everyone
     if (challenge.creator.toString() === req.user.id) {
       const participantIds = challenge.participants
-        .map((p) => p.user.toString())
+        .map((p) => p.user._id.toString())
         .filter((id) => id !== req.user.id);
 
       await Promise.all(participantIds.map((userId) =>
@@ -169,7 +182,7 @@ router.delete('/:id', auth, async (req, res) => {
     challenge.participants = challenge.participants.filter((p) => p.user._id.toString() !== req.user.id);
     await challenge.save();
 
-    const remainingParticipantIds = challenge.participants.map((p) => p.user.toString());
+    const remainingParticipantIds = challenge.participants.map((p) => p.user._id.toString());
     await Promise.all(remainingParticipantIds.map((userId) =>
       Notification.create({
         user: userId,

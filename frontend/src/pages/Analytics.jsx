@@ -45,20 +45,23 @@ const Analytics = () => {
     const completionRate = challenges.length > 0 ? Math.round((completed / challenges.length) * 100) : 0;
 
     // Build global top performers
-    const allParticipants = [];
+    const userMap = {};
     challenges.forEach((c) => {
       c.participants.forEach((p) => {
         if (p.user && p.usageSeconds !== undefined) {
-          allParticipants.push({
-            name: p.user.name || p.user.email,
-            challengeTitle: c.title,
-            usageSeconds: p.usageSeconds,
-          });
+          const uid = p.user._id;
+          if (!userMap[uid]) {
+            userMap[uid] = {
+              name: p.user.name || p.user.email,
+              usageSeconds: 0,
+            };
+          }
+          userMap[uid].usageSeconds += p.usageSeconds;
         }
       });
     });
     // Sort by lowest usage (best performers) and grab top 3
-    const topPerformers = allParticipants
+    const topPerformers = Object.values(userMap)
       .sort((a, b) => a.usageSeconds - b.usageSeconds)
       .slice(0, 3);
 
@@ -75,6 +78,14 @@ const Analytics = () => {
       topPerformers
     };
   }, [challenges]);
+
+  const formatSeconds = (sec) => {
+    if (!sec) return '0 min';
+    const h = Math.floor(sec / 3600);
+    const m = Math.floor((sec % 3600) / 60);
+    if (h > 0) return `${h}h ${m}m`;
+    return `${m}m`;
+  };
 
   return (
     <div className="space-y-8">
@@ -144,11 +155,10 @@ const Analytics = () => {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="truncate font-semibold text-slate-900 dark:text-white">{user.name}</p>
-                        <p className="truncate text-xs text-slate-500 dark:text-slate-400">{user.challengeTitle}</p>
                       </div>
                       <div className="text-right">
                         <p className="text-sm font-bold text-slate-700 dark:text-slate-300">
-                          {Math.floor(user.usageSeconds / 60)}m
+                          {formatSeconds(user.usageSeconds)}
                         </p>
                       </div>
                     </div>

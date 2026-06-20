@@ -43,7 +43,17 @@ public class UsageStatsPlugin extends Plugin {
   @PluginMethod
   public void requestUsagePermission(PluginCall call) {
     Intent intent = new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS);
-    startActivityForResult(call, intent, "usagePermissionResultCallback");
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+      intent.setData(android.net.Uri.parse("package:" + getContext().getPackageName()));
+    }
+    
+    try {
+      startActivityForResult(call, intent, "usagePermissionResultCallback");
+    } catch (Exception e) {
+      // Fallback for some OEMs that crash on targeted intents
+      Intent fallback = new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS);
+      startActivityForResult(call, fallback, "usagePermissionResultCallback");
+    }
   }
 
   @ActivityCallback

@@ -1,6 +1,68 @@
 import { useEffect, useState } from 'react';
 import { notificationApi } from '../api';
 
+const ChallengeGroupCard = ({ group, markRead }) => {
+  const [expanded, setExpanded] = useState(false);
+  const unreadCount = group.notifications.filter((item) => !item.read).length;
+
+  return (
+    <div className="overflow-hidden rounded-3xl border border-slate-200 bg-slate-50 shadow-sm transition dark:border-slate-700 dark:bg-slate-900">
+      <button
+        type="button"
+        onClick={() => setExpanded((prev) => !prev)}
+        className="w-full px-5 py-4 text-left"
+      >
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <p className="text-lg font-semibold text-slate-900 dark:text-white">{group.title}</p>
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{group.notifications.length} message{group.notifications.length !== 1 ? 's' : ''}</p>
+          </div>
+          <div className="flex items-center gap-2">
+            {unreadCount > 0 && (
+              <span className="inline-flex h-7 min-w-[28px] items-center justify-center rounded-full bg-rose-500 px-2 text-xs font-semibold text-white">{unreadCount}</span>
+            )}
+            <span className="text-sm text-slate-500 dark:text-slate-400">{expanded ? 'Collapse' : 'Expand'}</span>
+          </div>
+        </div>
+      </button>
+      {expanded && (
+        <div className="space-y-3 border-t border-slate-200 px-5 py-4 dark:border-slate-700">
+          {group.notifications.map((item) => (
+            <div key={item._id} className={`rounded-3xl border p-4 ${item.read ? 'border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-950' : 'border-brand-500 bg-brand-500/10 dark:bg-brand-500/10'}`}>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm leading-6 text-slate-900 dark:text-slate-100">{item.message}</p>
+                  <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                    <span>{new Date(item.createdAt).toLocaleString()}</span>
+                    {item.actorEmail && (
+                      <>
+                        <span className="hidden sm:inline">•</span>
+                        <span>{item.actorEmail}</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {!item.read && (
+                    <span className="rounded-full bg-brand-500/15 px-3 py-1 text-xs font-semibold text-brand-700 dark:text-brand-100">New</span>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => markRead(item._id)}
+                    className="rounded-2xl border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+                  >
+                    Mark read
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
 const Notifications = ({ onUnreadCountChange }) => {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -44,66 +106,6 @@ const Notifications = ({ onUnreadCountChange }) => {
   }, {});
   const challengeGroups = Object.entries(grouped).sort((a, b) => b[1].notifications.filter((item) => !item.read).length - a[1].notifications.filter((item) => !item.read).length);
 
-  const ChallengeGroupCard = ({ group, markRead }) => {
-    const [expanded, setExpanded] = useState(false);
-    const unreadCount = group.notifications.filter((item) => !item.read).length;
-
-    return (
-      <div className="overflow-hidden rounded-3xl border border-slate-200 bg-slate-50 shadow-sm transition dark:border-slate-700 dark:bg-slate-900">
-        <button
-          type="button"
-          onClick={() => setExpanded((prev) => !prev)}
-          className="w-full px-5 py-4 text-left"
-        >
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <p className="text-lg font-semibold text-slate-900 dark:text-white">{group.title}</p>
-              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{group.notifications.length} message{group.notifications.length !== 1 ? 's' : ''}</p>
-            </div>
-            <div className="flex items-center gap-2">
-              {unreadCount > 0 && (
-                <span className="inline-flex h-7 min-w-[28px] items-center justify-center rounded-full bg-rose-500 px-2 text-xs font-semibold text-white">{unreadCount}</span>
-              )}
-              <span className="text-sm text-slate-500 dark:text-slate-400">{expanded ? 'Collapse' : 'Expand'}</span>
-            </div>
-          </div>
-        </button>
-        {expanded && (
-          <div className="space-y-3 border-t border-slate-200 px-5 py-4 dark:border-slate-700">
-            {group.notifications.map((item) => (
-              <div key={item._id} className={`rounded-3xl border p-4 ${item.read ? 'border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-950' : 'border-brand-500 bg-brand-500/10 dark:bg-brand-500/10'}`}>
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <p className="text-sm leading-6 text-slate-900 dark:text-slate-100">{item.message}</p>
-                    <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
-                      <span>{new Date(item.createdAt).toLocaleString()}</span>
-                      {item.actorEmail && (
-                        <>
-                          <span className="hidden sm:inline">•</span>
-                          <span>{item.actorEmail}</span>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {!item.read && (
-                      <span className="rounded-full bg-brand-500/15 px-3 py-1 text-xs font-semibold text-brand-700 dark:text-brand-100">New</span>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => markRead(item._id)}
-                      className="rounded-2xl border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
-                    >
-                      Mark read
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    );
   };
 
   return (

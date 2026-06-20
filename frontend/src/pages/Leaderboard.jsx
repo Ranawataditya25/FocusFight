@@ -39,6 +39,14 @@ const Leaderboard = () => {
     return list.map((item, index) => ({ ...item, rank: index + 1 }));
   }, [challenges]);
 
+  const formatSeconds = (sec) => {
+    if (!sec) return '0 min';
+    const h = Math.floor(sec / 3600);
+    const m = Math.floor((sec % 3600) / 60);
+    if (h > 0) return `${h} hr ${m} min`;
+    return `${m} min`;
+  };
+
   return (
     <div className="space-y-6">
       <div className="rounded-3xl border border-slate-200/20 bg-white/80 p-6 shadow-soft backdrop-blur-xl dark:border-slate-700/60 dark:bg-slate-950/85">
@@ -59,7 +67,7 @@ const Leaderboard = () => {
                   <p className="text-xl font-semibold text-slate-900 dark:text-white">#{item.rank} {item.name}</p>
                 </div>
                 <div className="rounded-3xl bg-brand-500/10 px-4 py-2 text-sm font-medium text-brand-600 dark:text-brand-300">
-                  {Math.floor(item.totalSeconds / 60)} min {item.totalSeconds % 60} sec
+                  {formatSeconds(item.totalSeconds)}
                 </div>
               </div>
             ))}

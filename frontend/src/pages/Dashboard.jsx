@@ -12,39 +12,32 @@ const Dashboard = ({ user }) => {
   const [userApps, setUserApps] = useState([]);
   const navigate = useNavigate();
 
-  const interceptPermission = async () => {
+  const [showPermissionModal, setShowPermissionModal] = useState(false);
+  const [pendingAction, setPendingAction] = useState(null);
+
+  const interceptPermission = async (actionFn) => {
     try {
       const hasPerm = await hasUsagePermission();
       if (!hasPerm) {
-        // Show an alert so they know why we are opening settings
-        alert("FocusFight needs Usage Access to track your challenge progress. Redirecting to settings...");
-        await requestUsagePermission();
-        // Return false to pause execution and wait for them to return
-        return false;
+        setPendingAction(() => actionFn);
+        setShowPermissionModal(true);
+      } else {
+        if (actionFn) actionFn();
       }
-      return true;
     } catch (err) {
       console.error("Permission intercept failed:", err);
-      return false;
     }
   };
 
-  const handleJoin = async (e) => {
+  const handleJoin = (e) => {
     e.preventDefault();
     if (!joinCode.trim()) return;
-    
-    const canProceed = await interceptPermission();
-    if (canProceed) {
-      navigate(`/invite/${joinCode.trim()}`);
-    }
+    interceptPermission(() => navigate(`/invite/${joinCode.trim()}`));
   };
 
-  const handleCreate = async (e) => {
+  const handleCreate = (e) => {
     e.preventDefault();
-    const canProceed = await interceptPermission();
-    if (canProceed) {
-      navigate('/create');
-    }
+    interceptPermission(() => navigate('/create'));
   };
 
   useEffect(() => {
@@ -54,6 +47,15 @@ const Dashboard = ({ user }) => {
         let result = await challengeApi.list();
         let active = result.challenges.filter((c) => c.status === 'active');
         
+        if (active.length > 0) {
+          const hasPerm = await hasUsagePermission();
+          if (!hasPerm) {
+            setShowPermissionModal(true);
+          } else {
+            await syncAllChallengesUsage(active);
+          }
+        }
+
         const now = new Date();
         const finished = active.filter((c) => new Date(c.endDate) <= now);
         if (finished.length > 0) {
@@ -71,12 +73,6 @@ const Dashboard = ({ user }) => {
 
         if (!mounted) return;
         setChallenges(result.challenges);
-
-        if (active.length > 0) {
-          const hasPerm = await hasUsagePermission();
-          if (!hasPerm) await requestUsagePermission();
-          await syncAllChallengesUsage(active);
-        }
       } catch (err) {
         console.error(err);
       } finally {
@@ -98,24 +94,25 @@ const Dashboard = ({ user }) => {
             : null;
 
           const stats = await getAndroidUsageStats(earliestStart);
-          if (stats && stats.length > 0 && mounted) {
-            const processed = stats
-              .filter(app => app.secondsUsed > 5) // filter dead noise
-              .map(app => {
-                const totalMinutes = Math.floor(app.secondsUsed / 60);
-                let timeString = `${totalMinutes} min`;
-                if (totalMinutes >= 60) {
-                  const hrs = Math.floor(totalMinutes / 60);
-                  const mins = totalMinutes % 60;
-                  timeString = `${hrs} hr ${mins} min`;
-                }
-                return {
-                  name: app.appName,
-                  minutes: totalMinutes, // Keep for sorting
-                  displayTime: timeString
-                };
-              })
-              .sort((a, b) => b.minutes - a.minutes);
+          if (mounted) {
+            const trackedApps = [...new Set(activeChallenges.flatMap(c => c.apps))];
+
+            const processed = trackedApps.map(appName => {
+              const stat = stats ? stats.find(s => s.appName === appName) : null;
+              const totalMinutes = stat ? Math.floor(stat.secondsUsed / 60) : 0;
+              let timeString = `${totalMinutes} min`;
+              if (totalMinutes >= 60) {
+                const hrs = Math.floor(totalMinutes / 60);
+                const mins = totalMinutes % 60;
+                timeString = `${hrs} hr ${mins} min`;
+              }
+              return {
+                name: appName,
+                minutes: totalMinutes, // Keep for sorting
+                displayTime: timeString
+              };
+            }).sort((a, b) => b.minutes - a.minutes);
+            
             setUserApps(processed);
           }
         } catch (err) {
@@ -127,9 +124,22 @@ const Dashboard = ({ user }) => {
     fetchLiveUsage();
 
     // Listen for when the app comes back to the foreground
-    const nativeListener = CapacitorApp.addListener('appStateChange', ({ isActive }) => {
+    const nativeListener = CapacitorApp.addListener('appStateChange', async ({ isActive }) => {
       if (isActive && mounted) {
         console.log("App became active again! Re-fetching stats...");
+        
+        const hasPerm = await hasUsagePermission();
+        if (!hasPerm) {
+           setShowPermissionModal(true);
+        } else {
+           setShowPermissionModal(false);
+           // Attempt sync if they just granted it
+           challengeApi.list().then(res => {
+             const act = res.challenges.filter(c => c.status === 'active');
+             if (act.length > 0) syncAllChallengesUsage(act);
+           });
+        }
+
         // Use functional state pattern to get the freshest challenges array
         setChallenges(prev => {
           fetchLiveUsage(prev);
@@ -240,6 +250,51 @@ const Dashboard = ({ user }) => {
           </div>
         )}
       </div>
+
+      {/* Custom Usage Permission Modal */}
+      {showPermissionModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4 backdrop-blur-sm dark:bg-black/60">
+          <div className="w-full max-w-sm rounded-3xl border border-slate-200/50 bg-white p-6 shadow-xl dark:border-slate-700/50 dark:bg-slate-900">
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-brand-500/10 text-brand-500">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+              </svg>
+            </div>
+            <h3 className="text-center text-lg font-semibold text-slate-900 dark:text-white">Usage Access Required</h3>
+            <p className="mt-2 text-center text-sm text-slate-600 dark:text-slate-400">
+              FocusFight needs "Usage Access" permission to track your app time and calculate your challenge progress.
+            </p>
+            <div className="mt-4 rounded-2xl bg-slate-50 p-3 text-xs text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+              <strong>How to enable:</strong>
+              <ol className="ml-4 mt-1 list-decimal space-y-1">
+                <li>Click the settings button below</li>
+                <li>Find and tap <strong>FocusFight</strong></li>
+                <li>Toggle <strong>Allow usage tracking</strong></li>
+              </ol>
+            </div>
+            <div className="mt-6 flex flex-col gap-3">
+              <button
+                onClick={async () => {
+                  await requestUsagePermission();
+                  // The appStateChange listener will handle re-verifying when they return
+                }}
+                className="rounded-3xl bg-brand-500 px-5 py-3 text-sm font-semibold text-white transition hover:bg-brand-400"
+              >
+                Continue to Settings
+              </button>
+              <button
+                onClick={() => {
+                  setShowPermissionModal(false);
+                  setPendingAction(null);
+                }}
+                className="rounded-3xl border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

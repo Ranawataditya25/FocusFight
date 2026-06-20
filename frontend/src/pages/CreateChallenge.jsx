@@ -212,6 +212,54 @@ const CreateChallenge = () => {
                 )}
               </div>
             </label>
+
+            {/* Prize Pool Preview */}
+            <div className="rounded-3xl border border-brand-500/20 bg-brand-50/50 p-5 dark:border-brand-500/10 dark:bg-brand-500/5">
+              <div className="flex items-center justify-between mb-4">
+                <h4 className="text-sm font-semibold uppercase tracking-[0.15em] text-brand-600 dark:text-brand-400">Prize Pool Breakdown</h4>
+                <span className="rounded-full bg-brand-500 px-3 py-1 text-xs font-bold text-white">
+                  {state.durationType === 'week' ? 7 : state.durationType === 'month' ? 30 : state.durationType === 'day' ? 1 : state.durationValue * 10} Credits Total
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div className="flex items-center justify-between rounded-2xl bg-white px-3 py-2 shadow-sm dark:bg-slate-900">
+                  <span className="font-medium text-slate-700 dark:text-slate-300">🥇 1st</span>
+                  <span className="font-bold text-brand-600 dark:text-brand-400">
+                    {(() => {
+                      const days = state.durationType === 'week' ? 7 : state.durationType === 'month' ? 30 : state.durationType === 'day' ? 1 : state.durationValue;
+                      return days * 10;
+                    })()} cr
+                  </span>
+                </div>
+                <div className="flex items-center justify-between rounded-2xl bg-white px-3 py-2 shadow-sm dark:bg-slate-900">
+                  <span className="font-medium text-slate-700 dark:text-slate-300">🥈 2nd</span>
+                  <span className="font-bold text-slate-900 dark:text-white">
+                    {(() => {
+                      const days = state.durationType === 'week' ? 7 : state.durationType === 'month' ? 30 : state.durationType === 'day' ? 1 : state.durationValue;
+                      return Math.floor((days * 10) * 0.5);
+                    })()} cr
+                  </span>
+                </div>
+                <div className="flex items-center justify-between rounded-2xl bg-white px-3 py-2 shadow-sm dark:bg-slate-900">
+                  <span className="font-medium text-slate-700 dark:text-slate-300">🥉 3rd</span>
+                  <span className="font-bold text-slate-900 dark:text-white">
+                    {(() => {
+                      const days = state.durationType === 'week' ? 7 : state.durationType === 'month' ? 30 : state.durationType === 'day' ? 1 : state.durationValue;
+                      return Math.floor((days * 10) * 0.25);
+                    })()} cr
+                  </span>
+                </div>
+                <div className="flex items-center justify-between rounded-2xl bg-white px-3 py-2 shadow-sm dark:bg-slate-900">
+                  <span className="font-medium text-slate-700 dark:text-slate-300">Other</span>
+                  <span className="font-bold text-slate-500 dark:text-slate-400">
+                    {(() => {
+                      const days = state.durationType === 'week' ? 7 : state.durationType === 'month' ? 30 : state.durationType === 'day' ? 1 : state.durationValue;
+                      return Math.floor((days * 10) * 0.1);
+                    })()} cr
+                  </span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 

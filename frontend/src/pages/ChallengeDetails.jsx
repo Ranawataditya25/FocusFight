@@ -139,6 +139,57 @@ const ChallengeDetails = () => {
             </div>
           </div>
         </div>
+
+        {/* Prize Pool Preview */}
+        <div className="mt-6 rounded-3xl border border-brand-500/20 bg-brand-50/50 p-5 dark:border-brand-500/10 dark:bg-brand-500/5">
+          <div className="flex items-center justify-between mb-4">
+            <h4 className="text-sm font-semibold uppercase tracking-[0.15em] text-brand-600 dark:text-brand-400">Prize Pool Breakdown</h4>
+            <span className="rounded-full bg-brand-500 px-3 py-1 text-xs font-bold text-white">
+              {(() => {
+                const days = challenge.durationType === 'week' ? 7 : challenge.durationType === 'month' ? 30 : challenge.durationType === 'day' ? 1 : challenge.durationValue || 7;
+                return days * 10;
+              })()} Credits Total
+            </span>
+          </div>
+          <div className="grid grid-cols-2 gap-3 text-sm lg:grid-cols-4">
+            <div className="flex items-center justify-between rounded-2xl bg-white px-3 py-2 shadow-sm dark:bg-slate-900">
+              <span className="font-medium text-slate-700 dark:text-slate-300">🥇 1st</span>
+              <span className="font-bold text-brand-600 dark:text-brand-400">
+                {(() => {
+                  const days = challenge.durationType === 'week' ? 7 : challenge.durationType === 'month' ? 30 : challenge.durationType === 'day' ? 1 : challenge.durationValue || 7;
+                  return days * 10;
+                })()} cr
+              </span>
+            </div>
+            <div className="flex items-center justify-between rounded-2xl bg-white px-3 py-2 shadow-sm dark:bg-slate-900">
+              <span className="font-medium text-slate-700 dark:text-slate-300">🥈 2nd</span>
+              <span className="font-bold text-slate-900 dark:text-white">
+                {(() => {
+                  const days = challenge.durationType === 'week' ? 7 : challenge.durationType === 'month' ? 30 : challenge.durationType === 'day' ? 1 : challenge.durationValue || 7;
+                  return Math.floor((days * 10) * 0.5);
+                })()} cr
+              </span>
+            </div>
+            <div className="flex items-center justify-between rounded-2xl bg-white px-3 py-2 shadow-sm dark:bg-slate-900">
+              <span className="font-medium text-slate-700 dark:text-slate-300">🥉 3rd</span>
+              <span className="font-bold text-slate-900 dark:text-white">
+                {(() => {
+                  const days = challenge.durationType === 'week' ? 7 : challenge.durationType === 'month' ? 30 : challenge.durationType === 'day' ? 1 : challenge.durationValue || 7;
+                  return Math.floor((days * 10) * 0.25);
+                })()} cr
+              </span>
+            </div>
+            <div className="flex items-center justify-between rounded-2xl bg-white px-3 py-2 shadow-sm dark:bg-slate-900">
+              <span className="font-medium text-slate-700 dark:text-slate-300">Other</span>
+              <span className="font-bold text-slate-500 dark:text-slate-400">
+                {(() => {
+                  const days = challenge.durationType === 'week' ? 7 : challenge.durationType === 'month' ? 30 : challenge.durationType === 'day' ? 1 : challenge.durationValue || 7;
+                  return Math.floor((days * 10) * 0.1);
+                })()} cr
+              </span>
+            </div>
+          </div>
+        </div>
         <div className="mt-6 flex flex-wrap gap-3">
           {challenge.apps.map((app) => (
             <span key={app} className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-100 px-4 py-2 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100">
@@ -156,7 +207,12 @@ const ChallengeDetails = () => {
             {challenge.participants.map((participant) => (
               <div key={participant.user._id} className="flex items-center justify-between rounded-3xl bg-slate-50 p-4 dark:bg-slate-900">
                 <div>
-                  <div className="font-semibold text-slate-900 dark:text-white">{participant.user.name}</div>
+                  <div className="font-semibold text-slate-900 dark:text-white">
+                    {participant.user.name} 
+                    {currentUser && participant.user._id === currentUser.id && (
+                      <span className="ml-2 text-brand-500 text-xs font-bold uppercase tracking-wider bg-brand-500/10 px-2 py-0.5 rounded-full">(You)</span>
+                    )}
+                  </div>
                   <div className="text-sm text-slate-500 dark:text-slate-400">{participant.accepted ? 'Accepted' : 'Pending'}</div>
                   {currentUser && currentUser.id === challenge.creator._id && (
                     <div className="text-xs text-slate-500 dark:text-slate-400">{participant.user.email}</div>
