@@ -48,7 +48,7 @@ export const requestUsagePermission = async () => {
   return { granted: false };
 };
 
-export const getAndroidUsageStats = async () => {
+export const getAndroidUsageStats = async (startTime = null) => {
   if (!Capacitor.isNativePlatform()) {
     console.log("Generating mock usage data for Web...");
     return Object.values(PACKAGE_TO_APP_MAP).map(appName => ({
@@ -61,15 +61,20 @@ export const getAndroidUsageStats = async () => {
   try {
     const plugin = getUsageStatsPlugin();
     if (plugin?.queryUsageStats) {
-      const result = await plugin.queryUsageStats({ start: Date.now() - 1000 * 60 * 60 * 24 });
+      // Default to the start of the current calendar day if no startTime provided
+      const defaultStart = new Date();
+      defaultStart.setHours(0, 0, 0, 0);
+      const queryStart = startTime ? startTime : defaultStart.getTime();
+
+      const result = await plugin.queryUsageStats({ start: queryStart });
       if (result && result.stats) {
         return result.stats
+          .filter(stat => PACKAGE_TO_APP_MAP[stat.packageName])
           .map(stat => ({
-            appName: PACKAGE_TO_APP_MAP[stat.packageName] || stat.packageName,
+            appName: PACKAGE_TO_APP_MAP[stat.packageName],
             secondsUsed: Math.round(stat.milliseconds / 1000),
             recordedAt: new Date().toISOString()
-          }))
-          .filter(stat => PACKAGE_TO_APP_MAP[stat.packageName]);
+          }));
       }
     }
   } catch (e) {
@@ -81,10 +86,13 @@ export const getAndroidUsageStats = async () => {
 
 export const syncAllChallengesUsage = async (activeChallenges) => {
   try {
-    const stats = await getAndroidUsageStats();
-    if (stats.length === 0) return;
-
     for (const challenge of activeChallenges) {
+      // Use challenge start date (or created date) as the baseline
+      const startTime = new Date(challenge.startDate || challenge.createdAt).getTime();
+      const stats = await getAndroidUsageStats(startTime);
+      
+      if (stats.length === 0) continue;
+
       // Filter stats to only the apps this challenge cares about
       const challengeStats = stats.filter(stat => challenge.apps.includes(stat.appName));
       if (challengeStats.length > 0) {

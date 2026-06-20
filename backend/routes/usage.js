@@ -14,30 +14,24 @@ router.post('/sync', auth, async (req, res) => {
   const challenge = await Challenge.findById(challengeId);
   if (!challenge) return res.status(404).json({ message: 'Challenge not found' });
 
-  const docs = records.map((record) => ({
-    challenge: challenge._id,
-    user: req.user.id,
-    appName: record.appName,
-    secondsUsed: record.secondsUsed,
-    recordedAt: record.recordedAt ? new Date(record.recordedAt) : new Date(),
-  }));
+  let totalSeconds = 0;
+  for (const record of records) {
+    totalSeconds += record.secondsUsed || 0;
+    
+    await UsageRecord.findOneAndUpdate(
+      { user: req.user.id, challenge: challengeId, appName: record.appName },
+      { $set: { secondsUsed: record.secondsUsed, recordedAt: record.recordedAt ? new Date(record.recordedAt) : new Date() } },
+      { upsert: true }
+    );
+  }
 
-  await UsageRecord.insertMany(docs);
-
-  const totals = await UsageRecord.aggregate([
-    { $match: { challenge: challenge._id, user: req.user._id } },
-    { $group: { _id: '$user', totalSeconds: { $sum: '$secondsUsed' } } },
-  ]);
-
-  const totalSeconds = totals[0]?.totalSeconds || 0;
-  
-  // Update the participant's usageSeconds in the Challenge document
+  // Update the participant's usageSeconds in the Challenge document directly
   await Challenge.updateOne(
-    { _id: challenge._id, 'participants.user': req.user._id },
+    { _id: challenge._id, 'participants.user': req.user.id },
     { $set: { 'participants.$.usageSeconds': totalSeconds } }
   );
 
-  return res.json({ message: 'Usage synced', totals });
+  return res.json({ message: 'Usage synced', totalSeconds });
 });
 
 router.get('/challenge/:challengeId', auth, async (req, res) => {

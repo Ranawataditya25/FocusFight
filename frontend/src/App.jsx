@@ -88,8 +88,18 @@ function App() {
   const handleAuthSuccess = (token, userData) => {
     setToken(token);
     setUser(userData);
+    refreshUnreadNotifications();
     navigate('/dashboard');
   };
+
+  useEffect(() => {
+    if (!user) return;
+    // Poll for notifications every 30 seconds for "real-time" feel
+    const interval = setInterval(() => {
+      refreshUnreadNotifications();
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [user]);
 
   const handleLogout = () => {
     removeToken();

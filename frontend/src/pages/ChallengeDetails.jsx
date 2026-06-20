@@ -45,8 +45,14 @@ const ChallengeDetails = () => {
   const chartData = Object.values(records
     .filter(r => r.user === currentUser.id)
     .reduce((acc, curr) => {
-      if (!acc[curr.appName]) acc[curr.appName] = { name: curr.appName, seconds: 0 };
-      acc[curr.appName].seconds += curr.secondsUsed;
+      // By checking !acc[curr.appName], we only grab the most recent record (due to backend sort order)
+      // This mathematically bypasses any duplicated data on the old Render backend!
+      if (!acc[curr.appName]) {
+        acc[curr.appName] = { 
+          name: curr.appName, 
+          minutes: Math.floor(curr.secondsUsed / 60) 
+        };
+      }
       return acc;
     }, {}));
 
@@ -180,7 +186,7 @@ const ChallengeDetails = () => {
                 <XAxis dataKey="name" stroke="#868e96" />
                 <YAxis stroke="#868e96" />
                 <Tooltip wrapperClassName="bg-white/95 rounded-3xl border border-slate-200 shadow-soft dark:bg-slate-900" />
-                <Bar dataKey="seconds" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="minutes" fill="#3b82f6" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>

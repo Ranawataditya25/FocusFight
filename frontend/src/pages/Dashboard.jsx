@@ -3,17 +3,47 @@ import { Link, useNavigate } from 'react-router-dom';
 import { challengeApi } from '../api';
 import StatsCard from '../components/StatsCard';
 import { hasUsagePermission, requestUsagePermission, syncAllChallengesUsage } from '../utils/usageTracker';
+import { App as CapacitorApp } from '@capacitor/app';
 
 const Dashboard = ({ user }) => {
   const [challenges, setChallenges] = useState([]);
   const [loading, setLoading] = useState(true);
   const [joinCode, setJoinCode] = useState('');
+  const [userApps, setUserApps] = useState([]);
   const navigate = useNavigate();
 
-  const handleJoin = (e) => {
+  const interceptPermission = async () => {
+    try {
+      const hasPerm = await hasUsagePermission();
+      if (!hasPerm) {
+        // Show an alert so they know why we are opening settings
+        alert("FocusFight needs Usage Access to track your challenge progress. Redirecting to settings...");
+        await requestUsagePermission();
+        // Return false to pause execution and wait for them to return
+        return false;
+      }
+      return true;
+    } catch (err) {
+      console.error("Permission intercept failed:", err);
+      return false;
+    }
+  };
+
+  const handleJoin = async (e) => {
     e.preventDefault();
-    if (joinCode.trim()) {
+    if (!joinCode.trim()) return;
+    
+    const canProceed = await interceptPermission();
+    if (canProceed) {
       navigate(`/invite/${joinCode.trim()}`);
+    }
+  };
+
+  const handleCreate = async (e) => {
+    e.preventDefault();
+    const canProceed = await interceptPermission();
+    if (canProceed) {
+      navigate('/create');
     }
   };
 
@@ -54,7 +84,64 @@ const Dashboard = ({ user }) => {
       }
     };
     loadData();
-    return () => { mounted = false; };
+
+    // Fetch live usage history for UI
+    const fetchLiveUsage = (activeList = challenges) => {
+      import('../utils/usageTracker').then(async ({ getAndroidUsageStats, hasUsagePermission }) => {
+        try {
+          const hasPerm = await hasUsagePermission();
+          if (!hasPerm) return;
+
+          const activeChallenges = activeList.filter(c => c.status === 'active');
+          const earliestStart = activeChallenges.length > 0 
+            ? Math.min(...activeChallenges.map(c => new Date(c.startDate || c.createdAt).getTime()))
+            : null;
+
+          const stats = await getAndroidUsageStats(earliestStart);
+          if (stats && stats.length > 0 && mounted) {
+            const processed = stats
+              .filter(app => app.secondsUsed > 5) // filter dead noise
+              .map(app => {
+                const totalMinutes = Math.floor(app.secondsUsed / 60);
+                let timeString = `${totalMinutes} min`;
+                if (totalMinutes >= 60) {
+                  const hrs = Math.floor(totalMinutes / 60);
+                  const mins = totalMinutes % 60;
+                  timeString = `${hrs} hr ${mins} min`;
+                }
+                return {
+                  name: app.appName,
+                  minutes: totalMinutes, // Keep for sorting
+                  displayTime: timeString
+                };
+              })
+              .sort((a, b) => b.minutes - a.minutes);
+            setUserApps(processed);
+          }
+        } catch (err) {
+          console.error("UI Data Load Error:", err);
+        }
+      });
+    };
+
+    fetchLiveUsage();
+
+    // Listen for when the app comes back to the foreground
+    const nativeListener = CapacitorApp.addListener('appStateChange', ({ isActive }) => {
+      if (isActive && mounted) {
+        console.log("App became active again! Re-fetching stats...");
+        // Use functional state pattern to get the freshest challenges array
+        setChallenges(prev => {
+          fetchLiveUsage(prev);
+          return prev;
+        });
+      }
+    });
+
+    return () => { 
+      mounted = false; 
+      nativeListener.then(l => l.remove());
+    };
   }, []);
 
   return (
@@ -86,12 +173,12 @@ const Dashboard = ({ user }) => {
 
             <div className="space-y-2">
               <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Start a new challenge</p>
-              <Link className="flex w-full items-center justify-center rounded-3xl bg-brand-500 px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-400 whitespace-nowrap" to="/create">
+              <button onClick={handleCreate} className="flex w-full items-center justify-center rounded-3xl bg-brand-500 px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-400 whitespace-nowrap">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="mr-1.5 h-4 w-4">
                   <path d="M12 5v14m-7-7h14" />
                 </svg>
                 New Challenge
-              </Link>
+              </button>
             </div>
           </div>
         </div>
@@ -129,6 +216,26 @@ const Dashboard = ({ user }) => {
                   <span>{challenge.status === 'pending' ? 'Starts when joined' : `Ends ${new Date(challenge.endDate).toLocaleDateString()}`}</span>
                 </div>
               </Link>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="space-y-4 rounded-3xl border border-slate-200/20 bg-white/80 p-6 shadow-soft backdrop-blur-xl dark:border-slate-700/60 dark:bg-slate-950/85">
+        <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Live App Usage History</h2>
+        {userApps.length === 0 ? (
+          <div className="rounded-3xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">
+            No active app usage found yet. Enable permissions to start tracking live stats.
+          </div>
+        ) : (
+          <div className="flex flex-wrap gap-3">
+            {userApps.map((app, i) => (
+              <div key={i} className="flex min-w-[140px] flex-1 items-center justify-between rounded-2xl bg-slate-50 px-4 py-3 dark:bg-slate-900">
+                <span className="font-medium text-slate-700 dark:text-slate-300 mr-4">{app.name}</span>
+                <span className="shrink-0 rounded-full bg-slate-200 px-3 py-1 text-xs font-semibold text-slate-800 dark:bg-slate-800 dark:text-slate-200">
+                  {app.displayTime}
+                </span>
+              </div>
             ))}
           </div>
         )}
