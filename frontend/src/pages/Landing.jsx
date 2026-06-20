@@ -1,6 +1,15 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
 
 const Landing = ({ user, theme, toggleTheme }) => {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (user) {
+      navigate('/dashboard');
+    }
+  }, [user, navigate]);
+
   return (
     <main className="space-y-4 flex-1">
       <section className="rounded-[2rem] glass-panel p-4">

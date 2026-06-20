@@ -1,6 +1,8 @@
 import { usageApi } from '../api';
+import { registerPlugin, Capacitor } from '@capacitor/core';
 
-const getUsageStatsPlugin = () => window.Capacitor?.Plugins?.UsageStats;
+const UsageStats = registerPlugin('UsageStats');
+const getUsageStatsPlugin = () => UsageStats;
 
 const PACKAGE_TO_APP_MAP = {
   'com.instagram.android': 'Instagram',
@@ -15,41 +17,65 @@ const PACKAGE_TO_APP_MAP = {
 };
 
 export const hasUsagePermission = async () => {
-  const plugin = getUsageStatsPlugin();
-  if (plugin?.hasUsagePermission) {
-    const result = await plugin.hasUsagePermission();
-    return result?.granted ?? false;
+  if (!Capacitor.isNativePlatform()) return true;
+  
+  try {
+    const plugin = getUsageStatsPlugin();
+    if (plugin?.hasUsagePermission) {
+      const result = await plugin.hasUsagePermission();
+      return result?.granted ?? false;
+    }
+  } catch (err) {
+    console.warn("UsageStats plugin not available:", err);
   }
   return false;
 };
 
 export const requestUsagePermission = async () => {
-  const plugin = getUsageStatsPlugin();
-  if (plugin?.requestUsagePermission) {
-    return plugin.requestUsagePermission();
+  if (!Capacitor.isNativePlatform()) {
+    console.log("Mocking permission request on Web...");
+    return { granted: true };
+  }
+
+  try {
+    const plugin = getUsageStatsPlugin();
+    if (plugin?.requestUsagePermission) {
+      return await plugin.requestUsagePermission();
+    }
+  } catch (err) {
+    console.warn("UsageStats plugin not available:", err);
   }
   return { granted: false };
 };
 
 export const getAndroidUsageStats = async () => {
-  const plugin = getUsageStatsPlugin();
-  if (plugin?.queryUsageStats) {
-    try {
+  if (!Capacitor.isNativePlatform()) {
+    console.log("Generating mock usage data for Web...");
+    return [
+      { appName: 'Instagram', secondsUsed: Math.floor(Math.random() * 1800), recordedAt: new Date().toISOString() },
+      { appName: 'YouTube', secondsUsed: Math.floor(Math.random() * 3600), recordedAt: new Date().toISOString() },
+      { appName: 'TikTok', secondsUsed: Math.floor(Math.random() * 2400), recordedAt: new Date().toISOString() },
+    ];
+  }
+
+  try {
+    const plugin = getUsageStatsPlugin();
+    if (plugin?.queryUsageStats) {
       const result = await plugin.queryUsageStats({ start: Date.now() - 1000 * 60 * 60 * 24 });
       if (result && result.stats) {
-        // Map package names to our readable app names
         return result.stats
           .map(stat => ({
             appName: PACKAGE_TO_APP_MAP[stat.packageName] || stat.packageName,
             secondsUsed: Math.round(stat.milliseconds / 1000),
             recordedAt: new Date().toISOString()
           }))
-          .filter(stat => PACKAGE_TO_APP_MAP[stat.packageName]); // Only keep known apps to save bandwidth
+          .filter(stat => PACKAGE_TO_APP_MAP[stat.packageName]);
       }
-    } catch (e) {
-      console.error('Failed to fetch usage stats', e);
     }
+  } catch (e) {
+    console.warn('Failed to fetch native usage stats', e);
   }
+  
   return [];
 };
 

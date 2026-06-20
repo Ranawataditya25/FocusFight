@@ -74,7 +74,7 @@ router.post('/:inviteCode/respond', auth, async (req, res) => {
   await Notification.create({
     user: challenge.creator,
     challenge: challenge._id,
-    message: `${formatUser(req.user)} ${accepted ? 'accepted' : 'rejected'} your challenge`,
+    message: `${formatUser(req.user)} ${accepted ? 'accepted' : 'rejected'} your challenge: ${challenge.title}`,
     actorName: req.user.name,
     actorEmail: req.user.email,
     type: 'challenge',
