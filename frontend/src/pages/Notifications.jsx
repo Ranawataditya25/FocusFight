@@ -75,11 +75,6 @@ const Notifications = ({ onUnreadCountChange }) => {
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <p className="text-sm leading-6 text-slate-900 dark:text-slate-100">{item.message}</p>
-                    {item.actorName && (
-                      <p className="mt-2 text-sm font-medium text-slate-800 dark:text-slate-200">
-                        {item.actorName}
-                      </p>
-                    )}
                     <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
                       <span>{new Date(item.createdAt).toLocaleString()}</span>
                       {item.actorEmail && (

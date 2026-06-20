@@ -51,11 +51,11 @@ export const requestUsagePermission = async () => {
 export const getAndroidUsageStats = async () => {
   if (!Capacitor.isNativePlatform()) {
     console.log("Generating mock usage data for Web...");
-    return [
-      { appName: 'Instagram', secondsUsed: Math.floor(Math.random() * 1800), recordedAt: new Date().toISOString() },
-      { appName: 'YouTube', secondsUsed: Math.floor(Math.random() * 3600), recordedAt: new Date().toISOString() },
-      { appName: 'TikTok', secondsUsed: Math.floor(Math.random() * 2400), recordedAt: new Date().toISOString() },
-    ];
+    return Object.values(PACKAGE_TO_APP_MAP).map(appName => ({
+      appName,
+      secondsUsed: Math.floor(Math.random() * 3600),
+      recordedAt: new Date().toISOString()
+    }));
   }
 
   try {
