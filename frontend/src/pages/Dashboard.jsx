@@ -148,6 +148,10 @@ const Dashboard = ({ user, refreshUser }) => {
         if (!mounted) return;
         setChallenges(result.challenges);
         fetchLiveUsage(result.challenges);
+
+        import('../utils/notifications').then(({ scheduleChallengeEndAlert }) => {
+          active.forEach(scheduleChallengeEndAlert);
+        });
       } catch (err) {
         console.error(err);
       } finally {

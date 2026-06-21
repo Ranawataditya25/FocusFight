@@ -40,8 +40,21 @@ function App() {
     }
     try {
       const result = await notificationApi.list();
-      const unread = result.notifications.filter((item) => !item.read).length;
-      setUnreadCount(unread);
+      const unreadList = result.notifications.filter((item) => !item.read);
+      setUnreadCount(unreadList.length);
+
+      const lastSeenId = localStorage.getItem('ff_last_notification_id');
+      if (unreadList.length > 0) {
+        const latestNotification = unreadList[0];
+        if (!lastSeenId || latestNotification._id !== lastSeenId) {
+          localStorage.setItem('ff_last_notification_id', latestNotification._id);
+          if (lastSeenId) {
+            import('./utils/notifications').then(({ immediateAlert }) => {
+              immediateAlert('FocusFight', latestNotification.message);
+            });
+          }
+        }
+      }
     } catch {
       setUnreadCount(0);
     }
