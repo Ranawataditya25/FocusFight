@@ -62,7 +62,7 @@ const ChallengeDetails = () => {
     
     const participantsCount = challenge.participants.length;
     const entryFee = challenge.entryFee || 0;
-    const totalPrizePool = entryFee > 0 ? (entryFee * participantsCount) : (fallbackDays * 10 * participantsCount);
+    const totalPrizePool = entryFee > 0 ? (entryFee * participantsCount) : (fallbackDays * 10);
 
     let effectivePayoutStructure = challenge.payoutStructure;
     if (participantsCount <= 2) {
@@ -226,21 +226,23 @@ const ChallengeDetails = () => {
               sortedParticipants.map((participant, index) => {
                 const credits = getCreditsForRank(index);
                 return (
-                  <div key={participant.user._id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-3xl bg-slate-50 p-4 dark:bg-slate-900">
-                    <div className="flex items-center gap-3 min-w-0 flex-1">
-                      <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full font-bold ${index === 0 ? 'bg-yellow-100 text-yellow-600 dark:bg-yellow-500/20 dark:text-yellow-400' : index === 1 ? 'bg-slate-200 text-slate-600 dark:bg-slate-800 dark:text-slate-300' : index === 2 ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-500' : 'bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400'}`}>
-                        #{index + 1}
+                  <div key={participant.user._id} className="flex flex-col gap-3 rounded-3xl border border-slate-200/50 bg-slate-50 p-4 dark:border-slate-800/50 dark:bg-slate-900/50">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold ${index === 0 ? 'bg-yellow-100 text-yellow-600 dark:bg-yellow-500/20 dark:text-yellow-400' : index === 1 ? 'bg-slate-200 text-slate-600 dark:bg-slate-800 dark:text-slate-300' : index === 2 ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-500' : 'bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400'}`}>
+                          #{index + 1}
+                        </div>
+                        <p className="truncate font-semibold text-slate-900 dark:text-white">
+                          {participant.user.name}
+                          {currentUser && participant.user._id === currentUser.id && (
+                            <span className="ml-2 shrink-0 text-[10px] font-bold uppercase tracking-wider text-brand-500 bg-brand-500/10 px-2 py-0.5 rounded-full">(You)</span>
+                          )}
+                        </p>
                       </div>
-                      <p className="truncate font-semibold text-slate-900 dark:text-white">
-                        {participant.user.name}
-                        {currentUser && participant.user._id === currentUser.id && (
-                          <span className="ml-3 shrink-0 text-xs font-bold uppercase tracking-wider text-brand-500 bg-brand-500/10 px-2 py-1 rounded-full">(You)</span>
-                        )}
-                      </p>
                     </div>
-                    <div className="flex items-center gap-3 shrink-0">
-                      <span className="text-sm font-bold text-slate-600 dark:text-slate-300 w-20 text-right">{formatSeconds(participant.usageSeconds)}</span>
-                      <div className={`rounded-3xl px-3 py-1.5 text-sm font-bold whitespace-nowrap ${credits > 0 ? 'bg-brand-500/10 text-brand-600 dark:text-brand-300' : 'bg-slate-200/50 text-slate-500 dark:bg-slate-800 dark:text-slate-400'}`}>
+                    <div className="flex items-center justify-between pl-11">
+                      <span className="text-sm font-medium text-slate-500 dark:text-slate-400">{formatSeconds(participant.usageSeconds)}</span>
+                      <div className={`rounded-full px-3 py-1 text-xs font-bold whitespace-nowrap ${credits > 0 ? 'bg-brand-500/10 text-brand-600 dark:text-brand-400' : 'bg-slate-200/50 text-slate-500 dark:bg-slate-800 dark:text-slate-400'}`}>
                         +{credits} cr
                       </div>
                     </div>

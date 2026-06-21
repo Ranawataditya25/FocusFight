@@ -135,7 +135,7 @@ router.post('/:id/complete', auth, async (req, res) => {
     else if (challenge.durationType === 'month') fallbackDays = 30;
     else if (challenge.durationType === 'custom') fallbackDays = challenge.durationValue || 7;
 
-    const totalPrizePool = challenge.entryFee > 0 ? (challenge.entryFee * validParticipantsCount) : (fallbackDays * 10 * validParticipantsCount);
+    const totalPrizePool = challenge.entryFee > 0 ? (challenge.entryFee * validParticipantsCount) : (fallbackDays * 10);
     const payoutStructure = challenge.payoutStructure || 'top_3';
     
     let effectivePayoutStructure = payoutStructure;

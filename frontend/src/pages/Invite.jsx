@@ -49,30 +49,30 @@ const InvitePage = () => {
   const participant = challenge.participants?.find((p) => p.user?._id === currentUserId || p.user === currentUserId);
 
   return (
-    <div className="mx-auto max-w-3xl rounded-3xl border border-slate-800 bg-slate-900/90 p-4 sm:p-8 shadow-soft">
-      <h1 className="text-3xl font-semibold text-white">Challenge Invite</h1>
-      <p className="mt-3 text-slate-400">{challenge.description || 'Join a FocusFight challenge to keep each other accountable with app usage tracking.'}</p>
-      <div className="mt-8 space-y-4 rounded-3xl border border-slate-800 bg-slate-950 p-6">
-        <p className="text-sm uppercase tracking-[0.2em] text-slate-400">Challenge</p>
-        <h2 className="text-2xl font-semibold text-white">{challenge.title}</h2>
+    <div className="mx-auto max-w-3xl rounded-3xl border border-slate-200 bg-white/90 p-4 sm:p-8 shadow-soft dark:border-slate-800 dark:bg-slate-900/90">
+      <h1 className="text-3xl font-semibold text-slate-900 dark:text-white">Challenge Invite</h1>
+      <p className="mt-3 text-slate-600 dark:text-slate-400">{challenge.description || 'Join a FocusFight challenge to keep each other accountable with app usage tracking.'}</p>
+      <div className="mt-8 space-y-4 rounded-3xl border border-slate-200 bg-slate-50 p-6 dark:border-slate-800 dark:bg-slate-950">
+        <p className="text-sm uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">Challenge</p>
+        <h2 className="text-lg font-semibold text-slate-900 dark:text-white">{challenge.title}</h2>
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-slate-300 mr-2">Tracking:</span>
+          {/* <span className="text-slate-300 mr-2">Tracking:</span> */}
           {challenge.apps.map((app) => (
-            <span key={app} className="inline-flex items-center gap-2 rounded-full border border-slate-700 bg-slate-900 px-3 py-1.5 text-xs text-slate-200">
+            <span key={app} className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
               <RealAppIcon appName={app} />
               {app}
             </span>
           ))}
         </div>
-        <p className="text-slate-400">
+        <p className="text-slate-600 dark:text-slate-400">
           Ends: {challenge.status === 'pending' ? 'Starts when you join' : new Date(challenge.endDate).toLocaleString()}
         </p>
-        <p className="text-slate-400">
+        <p className="text-slate-600 dark:text-slate-400">
           Duration: {challenge.durationType === 'custom' ? `${challenge.durationValue} days` : challenge.durationType === 'week' ? '7 days' : challenge.durationType === 'month' ? '30 days' : '1 day'}
         </p>
         <p className="text-sm text-slate-500">Created by {challenge.creator?.name || challenge.creator?.email}</p>
         
-        <div className="grid grid-cols-2 sm:grid-cols-2 gap-4 py-4 border-y border-slate-800 my-4">
+        <div className="grid grid-cols-2 sm:grid-cols-2 gap-4 py-4 border-y border-slate-200 my-4 dark:border-slate-800">
           {/* Future feature: Real money/credits entry fee
           <div>
             <p className="text-xs uppercase tracking-wider text-slate-500">Entry Fee</p>
@@ -81,11 +81,11 @@ const InvitePage = () => {
           */}
           <div>
             <p className="text-xs uppercase tracking-wider text-slate-500">Max Players</p>
-            <p className="mt-1 font-bold text-slate-200">{challenge.maxParticipants}</p>
+            <p className="mt-1 font-bold text-slate-900 dark:text-slate-200">{challenge.maxParticipants}</p>
           </div>
           <div className="col-span-2 sm:col-span-1">
             <p className="text-xs uppercase tracking-wider text-slate-500">Structure</p>
-            <p className="mt-1 font-bold text-slate-200">
+            <p className="mt-1 font-bold text-slate-900 dark:text-slate-200">
               {challenge.payoutStructure === 'winner_takes_all' ? 'Winner Takes All' : 
                challenge.payoutStructure === 'top_half' ? 'Top Half Split' : 'Top 3 Tiered'}
             </p>
@@ -93,10 +93,10 @@ const InvitePage = () => {
         </div>
 
         <div>
-          <p className="text-sm text-slate-400">Participants ({challenge.participants.length})</p>
+          <p className="text-sm text-slate-600 dark:text-slate-400">Participants ({challenge.participants.length})</p>
           <div className="mt-2 flex flex-wrap gap-2">
             {challenge.participants.map((p, idx) => (
-              <span key={idx} className="rounded-full bg-slate-800 px-3 py-1 text-xs text-slate-300">
+              <span key={idx} className="rounded-full bg-slate-200 px-3 py-1 text-xs text-slate-700 dark:bg-slate-800 dark:text-slate-300">
                 {p.user?.name || 'A player'}
               </span>
             ))}
@@ -116,16 +116,16 @@ const InvitePage = () => {
       </div>
 
       {isCreator ? (
-        <div className="mt-8 rounded-3xl border border-slate-700 bg-slate-950 p-6 text-slate-200">
+        <div className="mt-8 rounded-3xl border border-slate-200 bg-slate-50 p-6 text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200">
           <p className="text-lg font-semibold">You created this challenge.</p>
-          <p className="mt-2 text-sm text-slate-400">Head to your dashboard to manage participants and challenge settings.</p>
+          <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">Head to your dashboard to manage participants and challenge settings.</p>
         </div>
       ) : participant ? (
-        <div className="mt-8 rounded-3xl border border-slate-700 bg-slate-950 p-6 text-slate-200">
+        <div className="mt-8 rounded-3xl border border-slate-200 bg-slate-50 p-6 text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200">
           <p className="text-lg font-semibold">
             {participant.accepted ? 'You have already accepted this challenge.' : 'You have already rejected this challenge.'}
           </p>
-          <p className="mt-2 text-sm text-slate-400">
+          <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
             {participant.accepted ? 'Good luck with your focus challenge!' : 'You will not be added to this challenge.'}
           </p>
         </div>
@@ -144,7 +144,7 @@ const InvitePage = () => {
           <button 
             onClick={() => respond(false)} 
             disabled={isAccepting || isRejecting}
-            className="inline-flex items-center justify-center rounded-3xl border border-slate-700 bg-slate-950 px-5 py-3 text-sm text-slate-200 transition hover:border-rose-500 hover:text-white disabled:opacity-70 disabled:cursor-not-allowed"
+            className="inline-flex items-center justify-center rounded-3xl border border-slate-300 bg-white px-5 py-3 text-sm text-slate-700 transition hover:border-rose-500 hover:text-rose-600 disabled:opacity-70 disabled:cursor-not-allowed dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200 dark:hover:border-rose-500 dark:hover:text-white"
           >
             {isRejecting ? (
               <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />

@@ -114,7 +114,7 @@ function App() {
 
   const handleLogout = () => {
     removeToken();
-    setUser(null);
+    window.location.href = '/';
   };
 
   const toggleTheme = () => setTheme((current) => (current === 'dark' ? 'light' : 'dark'));

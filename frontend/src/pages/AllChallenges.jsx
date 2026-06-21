@@ -138,7 +138,7 @@ const AllChallenges = ({ user }) => {
             {filtered.map((challenge) => {
               const isCreator = challenge.creator && challenge.creator._id === user.id;
               return (
-                <Link key={challenge._id} to={`/challenge/${challenge.inviteCode}`} className="rounded-3xl border border-slate-200 bg-slate-50 p-5 transition hover:border-brand-500 dark:border-slate-800 dark:bg-slate-950">
+                <Link key={challenge._id} to={`/challenge/${challenge.inviteCode}`} className="block w-full overflow-hidden rounded-3xl border border-slate-200 bg-slate-50 p-5 transition hover:border-brand-500 dark:border-slate-800 dark:bg-slate-950">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div className="min-w-0 flex-1">
                       <div className="flex items-start gap-2">

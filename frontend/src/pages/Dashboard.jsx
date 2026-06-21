@@ -229,12 +229,18 @@ const Dashboard = ({ user, refreshUser }) => {
         </div>
       </div>
 
-      <div className="grid gap-4 grid-cols-2 sm:grid-cols-2 lg:grid-cols-4">
-        <StatsCard title="Total challenges" value={challenges.length} meta="Active, Pending & Completed" />
-        <StatsCard title="Active challenges" value={challenges.filter((item) => item.status === 'active').length} meta="Currently tracking" />
-        <StatsCard title="Total participants" value={challenges.reduce((sum, item) => sum + item.participants.length, 0)} meta="Current joined users" />
-        <StatsCard title="Credits available" value={user?.credits ?? 0} meta="Redeem on completion" />
-      </div>
+      {loading ? (
+        <div className="flex h-32 items-center justify-center rounded-3xl border border-slate-200/20 bg-white/80 shadow-soft backdrop-blur-xl dark:border-slate-700/60 dark:bg-slate-950/85">
+          <div className="text-sm font-medium text-slate-500 dark:text-slate-400">Loading overview...</div>
+        </div>
+      ) : (
+        <div className="grid gap-4 grid-cols-2 sm:grid-cols-2 lg:grid-cols-4">
+          <StatsCard title="Total challenges" value={challenges.length} meta="Active, Pending & Completed" />
+          <StatsCard title="Active challenges" value={challenges.filter((item) => item.status === 'active').length} meta="Currently tracking" />
+          <StatsCard title="Total participants" value={challenges.reduce((sum, item) => sum + item.participants.length, 0)} meta="Current joined users" />
+          <StatsCard title="Credits available" value={user?.credits ?? 0} meta="Redeem on completion" />
+        </div>
+      )}
 
       <div className="space-y-4 rounded-3xl border border-slate-200/20 bg-white/80 p-6 shadow-soft backdrop-blur-xl dark:border-slate-700/60 dark:bg-slate-950/85">
         <div className="flex items-center justify-between">
@@ -250,7 +256,7 @@ const Dashboard = ({ user, refreshUser }) => {
             {challenges.slice(0, 3).map((challenge) => {
               const isCreator = challenge.creator && challenge.creator._id === user?.id;
               return (
-              <Link key={challenge._id} to={`/challenge/${challenge.inviteCode}`} className="rounded-3xl border border-slate-200 bg-slate-50 p-5 transition hover:border-brand-500 dark:border-slate-800 dark:bg-slate-950">
+              <Link key={challenge._id} to={`/challenge/${challenge.inviteCode}`} className="block w-full overflow-hidden rounded-3xl border border-slate-200 bg-slate-50 p-5 transition hover:border-brand-500 dark:border-slate-800 dark:bg-slate-950">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div className="min-w-0 flex-1">
                     <div className="flex items-start gap-2">

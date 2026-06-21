@@ -1,14 +1,14 @@
 import React from 'react';
 
 const PrizePoolPreview = ({ durationType, durationValue, maxParticipants = 10, entryFee = 0, payoutStructure = 'top_3', currentParticipants }) => {
-  const participantsCount = currentParticipants || maxParticipants;
+  const participantsCount = maxParticipants;
   
   let fallbackDays = 1;
   if (durationType === 'week') fallbackDays = 7;
   else if (durationType === 'month') fallbackDays = 30;
   else if (durationType === 'custom') fallbackDays = durationValue || 7;
   
-  const totalPrizePool = entryFee > 0 ? (entryFee * participantsCount) : (fallbackDays * 10 * participantsCount);
+  const totalPrizePool = entryFee > 0 ? (entryFee * participantsCount) : (fallbackDays * 10);
   
   let effectivePayoutStructure = payoutStructure;
   if (participantsCount <= 2) {

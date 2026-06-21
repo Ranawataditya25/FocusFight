@@ -61,6 +61,10 @@ const CreateChallenge = () => {
       setError('Enter a valid custom duration in days.');
       return;
     }
+    if (state.maxParticipants === '' || state.maxParticipants < 2) {
+      setError('Please enter at least 2 max participants.');
+      return;
+    }
 
     submitRef.current = true;
     setLoading(true);
@@ -234,9 +238,10 @@ const CreateChallenge = () => {
                   max="100"
                   value={state.maxParticipants}
                   onChange={(e) => {
-                    const maxP = Number(e.target.value);
+                    const val = e.target.value;
+                    const maxP = val === '' ? '' : parseInt(val, 10);
                     let payout = state.payoutStructure;
-                    if (maxP <= 2) payout = 'winner_takes_all';
+                    if (maxP !== '' && maxP <= 2) payout = 'winner_takes_all';
                     else if (maxP === 3 && payout === 'top_half') payout = 'top_3';
                     setState({ ...state, maxParticipants: maxP, payoutStructure: payout });
                   }}
