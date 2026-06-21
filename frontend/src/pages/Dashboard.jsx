@@ -19,6 +19,7 @@ const Dashboard = ({ user, refreshUser }) => {
   const navigate = useNavigate();
 
   const [showPermissionModal, setShowPermissionModal] = useState(false);
+  const [isBlockedBySecurity, setIsBlockedBySecurity] = useState(false);
   const [pendingAction, setPendingAction] = useState(null);
 
   const interceptPermission = async (actionFn) => {
@@ -162,15 +163,23 @@ const Dashboard = ({ user, refreshUser }) => {
     loadData();
 
     // Listen for when the app comes back to the foreground
+    let backgroundTime = 0;
     const nativeListener = CapacitorApp.addListener('appStateChange', async ({ isActive }) => {
-      if (isActive && mounted) {
+      if (!isActive) {
+        backgroundTime = Date.now();
+      } else if (isActive && mounted) {
+        const timeAway = Date.now() - backgroundTime;
         console.log("App became active again! Re-fetching stats...");
         
         const hasPerm = await hasUsagePermission();
         if (!hasPerm) {
            setShowPermissionModal(true);
+           if (backgroundTime > 0 && timeAway > 3000) {
+             setIsBlockedBySecurity(true);
+           }
         } else {
            setShowPermissionModal(false);
+           setIsBlockedBySecurity(false);
            // Attempt sync if they just granted it
            challengeApi.list().then(res => {
              const act = res.challenges.filter(c => c.status === 'active');
@@ -318,42 +327,84 @@ const Dashboard = ({ user, refreshUser }) => {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4 backdrop-blur-sm dark:bg-black/60">
           <div className="w-full max-w-sm rounded-3xl border border-slate-200/50 bg-white p-6 shadow-xl dark:border-slate-700/50 dark:bg-slate-900">
             <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-brand-500/10 text-brand-500">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6">
-                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-              </svg>
+              {isBlockedBySecurity ? (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6 text-rose-500">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                </svg>
+              ) : (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                </svg>
+              )}
             </div>
-            <h3 className="text-center text-lg font-semibold text-slate-900 dark:text-white">Usage Access Required</h3>
-            <p className="mt-2 text-center text-sm text-slate-600 dark:text-slate-400">
-              FocusFight needs "Usage Access" permission to track your app time and calculate your challenge progress.
-            </p>
-            <div className="mt-4 rounded-2xl bg-slate-50 p-3 text-xs text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-              <strong>How to enable:</strong>
-              <ol className="ml-4 mt-1 list-decimal space-y-1">
-                <li>Click the settings button below</li>
-                <li>Find and tap <strong>FocusFight</strong></li>
-                <li>Toggle <strong>Allow usage tracking</strong></li>
-              </ol>
-            </div>
-            <div className="mt-6 flex flex-col gap-3">
-              <button
-                onClick={async () => {
-                  await requestUsagePermission();
-                  // The appStateChange listener will handle re-verifying when they return
-                }}
-                className="rounded-3xl bg-brand-500 px-5 py-3 text-sm font-semibold text-white transition hover:bg-brand-400"
-              >
-                Continue to Settings
-              </button>
-              <button
-                onClick={() => {
-                  setShowPermissionModal(false);
-                  setPendingAction(null);
-                }}
-                className="rounded-3xl border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
-              >
-                Cancel
-              </button>
-            </div>
+            
+            {isBlockedBySecurity ? (
+              <>
+                <h3 className="text-center text-lg font-semibold text-slate-900 dark:text-white">Android Security Lock Detected</h3>
+                <p className="mt-2 text-center text-sm text-slate-600 dark:text-slate-400">
+                  Android has disabled the switch because this app is currently in development/sideloaded. To unlock it:
+                </p>
+                <div className="mt-4 rounded-2xl bg-slate-50 p-3 text-xs text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                  <ol className="ml-4 mt-1 list-decimal space-y-2">
+                    <li>Long-press the FocusFight icon on your home screen</li>
+                    <li>Tap <strong>App Info</strong></li>
+                    <li>Tap the three vertical dots (top right)</li>
+                    <li>Select <strong>Allow restricted settings</strong></li>
+                  </ol>
+                </div>
+                <div className="mt-6 flex flex-col gap-3">
+                  <button
+                    onClick={async () => {
+                      await requestUsagePermission();
+                    }}
+                    className="rounded-3xl bg-brand-500 px-5 py-3 text-sm font-semibold text-white transition hover:bg-brand-400"
+                  >
+                    Open Settings to Try Again
+                  </button>
+                  <button
+                    onClick={() => setIsBlockedBySecurity(false)}
+                    className="rounded-3xl border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                  >
+                    Back
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <h3 className="text-center text-lg font-semibold text-slate-900 dark:text-white">Permission Required</h3>
+                <p className="mt-2 text-center text-sm text-slate-600 dark:text-slate-400">
+                  FocusFight needs "Usage Access" permission to track your app time for multiplayer challenge metrics.
+                </p>
+                <div className="mt-4 rounded-2xl bg-slate-50 p-3 text-xs text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                  <strong>How to enable:</strong>
+                  <ol className="ml-4 mt-1 list-decimal space-y-1">
+                    <li>Click the settings button below</li>
+                    <li>Find and tap <strong>FocusFight</strong></li>
+                    <li>Toggle <strong>Permit usage access</strong></li>
+                  </ol>
+                </div>
+                <div className="mt-6 flex flex-col gap-3">
+                  <button
+                    onClick={async () => {
+                      await requestUsagePermission();
+                    }}
+                    className="rounded-3xl bg-brand-500 px-5 py-3 text-sm font-semibold text-white transition hover:bg-brand-400"
+                  >
+                    Configure in Settings
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowPermissionModal(false);
+                      setPendingAction(null);
+                    }}
+                    className="rounded-3xl border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
