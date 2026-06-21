@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { challengeApi } from '../api';
-import { appOptions, AppIcon } from '../components/AppIcon';
+import { appOptions, RealAppIcon } from '../components/AppIcon';
 import { Clipboard } from '@capacitor/clipboard';
 import PrizePoolPreview from '../components/PrizePoolPreview';
 
@@ -111,7 +111,7 @@ const CreateChallenge = () => {
                       : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200'
                   }`}
                 >
-                  <AppIcon name={app} />
+                  <RealAppIcon appName={app} />
                   <div>
                     <div className="text-sm font-semibold">{app}</div>
                     <div className="text-xs text-slate-500 dark:text-slate-400">Tap to {state.apps.includes(app) ? 'remove' : 'select'}</div>
@@ -146,10 +146,8 @@ const CreateChallenge = () => {
                         : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200'
                     }`}
                   >
-                    <AppIcon name={app} />
-                    <div>
-                      <div className="text-sm font-semibold">{app}</div>
-                    </div>
+                    <RealAppIcon appName={app} />
+                    <span className="text-sm font-medium">{app}</span>
                   </button>
                 ))}
               </div>

@@ -1,11 +1,22 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { challengeApi, usageApi } from '../api';
-import { AppIcon } from '../components/AppIcon';
+import { RealAppIcon } from '../components/AppIcon';
 import { BarChart, Bar, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 import { getUserFromToken } from '../auth';
 import { Clipboard } from '@capacitor/clipboard';
 import PrizePoolPreview from '../components/PrizePoolPreview';
+
+const CustomTick = (props) => {
+  const { x, y, payload } = props;
+  return (
+    <g transform={`translate(${x},${y})`}>
+      <text x={0} y={0} dy={16} textAnchor="end" fill="currentColor" transform="rotate(-45)" className="text-slate-700 dark:text-slate-300 text-xs font-medium">
+        {payload.value}
+      </text>
+    </g>
+  );
+};
 
 const ChallengeDetails = () => {
   const { code } = useParams();
@@ -143,7 +154,7 @@ const ChallengeDetails = () => {
         <div className="mt-6 flex flex-wrap gap-3">
           {challenge.apps.map((app) => (
             <span key={app} className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-100 px-4 py-2 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100">
-              <AppIcon name={app} size={22} />
+              <RealAppIcon appName={app} />
               {app}
             </span>
           ))}
@@ -191,15 +202,22 @@ const ChallengeDetails = () => {
                 <CartesianGrid stroke="#ced4da" strokeDasharray="4 4" strokeOpacity={0.5} />
                 <XAxis 
                   dataKey="name" 
-                  stroke="#868e96" 
                   interval={0} 
-                  angle={-45} 
-                  textAnchor="end" 
                   height={60} 
-                  tick={{ fill: '#868e96', fontSize: 12 }} 
+                  tick={<CustomTick />} 
                 />
                 <YAxis stroke="#868e96" />
-                <Tooltip wrapperClassName="bg-white/95 rounded-3xl border border-slate-200 shadow-soft dark:bg-slate-900" />
+                <Tooltip 
+                  wrapperClassName="bg-white/95 rounded-3xl border border-slate-200 shadow-soft"
+                  labelStyle={{ color: 'black', fontWeight: 'bold' }}
+                  itemStyle={{ color: 'black', fontWeight: '500' }}
+                  formatter={(value) => {
+                    if (value >= 60) {
+                      return [`${Math.floor(value / 60)}h ${value % 60}m`, 'Usage'];
+                    }
+                    return [`${value} min`, 'Usage'];
+                  }}
+                />
                 <Bar dataKey="minutes" fill="#3b82f6" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>

@@ -147,6 +147,29 @@ router.post('/:id/complete', auth, async (req, res) => {
           type: 'challenge',
         }).catch(() => null);
       }));
+
+      const creatorInParticipants = sorted.some(p => p.user && p.user._id && p.user._id.toString() === challenge.creator.toString());
+      if (!creatorInParticipants) {
+        await Notification.create({
+          user: challenge.creator,
+          challenge: challenge._id,
+          challengeTitle: challenge.title,
+          message: `Your challenge ${challenge.title} has finished! Winner: ${winnerName} with ${winnerTime}.`,
+          actorName: 'FocusFight System',
+          actorEmail: 'system@focusfight.com',
+          type: 'challenge',
+        }).catch(() => null);
+      }
+    } else {
+      await Notification.create({
+        user: challenge.creator,
+        challenge: challenge._id,
+        challengeTitle: challenge.title,
+        message: `Your challenge ${challenge.title} has finished, but no valid participants were found.`,
+        actorName: 'FocusFight System',
+        actorEmail: 'system@focusfight.com',
+        type: 'challenge',
+      }).catch(() => null);
     }
   }
   

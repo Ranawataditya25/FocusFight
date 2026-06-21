@@ -4,6 +4,7 @@ import { challengeApi } from '../api';
 import StatsCard from '../components/StatsCard';
 import { hasUsagePermission, requestUsagePermission, syncAllChallengesUsage } from '../utils/usageTracker';
 import { App as CapacitorApp } from '@capacitor/app';
+import { RealAppIcon } from '../components/AppIcon';
 
 const Dashboard = ({ user }) => {
   const [challenges, setChallenges] = useState([]);
@@ -224,7 +225,7 @@ const Dashboard = ({ user }) => {
         </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 grid-cols-2 sm:grid-cols-2 lg:grid-cols-4">
         <StatsCard title="Total challenges" value={challenges.length} meta="Active, pending" />
         <StatsCard title="Active challenges" value={challenges.filter((item) => item.status === 'active').length} meta="Currently tracking" />
         <StatsCard title="Total participants" value={challenges.reduce((sum, item) => sum + item.participants.length, 0)} meta="Current joined users" />
@@ -271,7 +272,10 @@ const Dashboard = ({ user }) => {
           <div className="flex flex-wrap gap-3">
             {userApps.map((app, i) => (
               <div key={i} className="flex min-w-[140px] flex-1 items-center justify-between rounded-2xl bg-slate-50 px-4 py-3 dark:bg-slate-900">
-                <span className="font-medium text-slate-700 dark:text-slate-300 mr-4">{app.name}</span>
+                <div className="flex items-center gap-3">
+                  <RealAppIcon appName={app.name} />
+                  <span className="font-medium text-slate-700 dark:text-slate-300">{app.name}</span>
+                </div>
                 <span className="shrink-0 rounded-full bg-slate-200 px-3 py-1 text-xs font-semibold text-slate-800 dark:bg-slate-800 dark:text-slate-200">
                   {app.displayTime}
                 </span>

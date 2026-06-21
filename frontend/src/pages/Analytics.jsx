@@ -2,16 +2,54 @@ import { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { challengeApi } from '../api';
 import StatsCard from '../components/StatsCard';
+import { RealAppIcon } from '../components/AppIcon';
 
 const Analytics = () => {
   const navigate = useNavigate();
   const [challenges, setChallenges] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const [dailyStats, setDailyStats] = useState({ loading: true, highestApp: null, dailyTotalSeconds: 0 });
+
   useEffect(() => {
     challengeApi.list()
-      .then((result) => setChallenges(result.challenges || []))
-      .catch(console.error)
+      .then(async (result) => {
+        const userChallenges = result.challenges || [];
+        setChallenges(userChallenges);
+        
+        try {
+          const { getAndroidUsageStats } = await import('../utils/usageTracker');
+          const stats = await getAndroidUsageStats();
+          
+          const challengeApps = new Set();
+          userChallenges.forEach(c => c.apps.forEach(app => challengeApps.add(app)));
+          
+          if (challengeApps.size === 0 || stats.length === 0) {
+            setDailyStats({ loading: false, highestApp: null, dailyTotalSeconds: 0 });
+            return;
+          }
+
+          const dailyTracked = stats.filter(stat => challengeApps.has(stat.appName));
+          let maxApp = null;
+          let total = 0;
+          
+          dailyTracked.forEach(stat => {
+            total += stat.secondsUsed;
+            if (!maxApp || stat.secondsUsed > maxApp.secondsUsed) {
+              maxApp = stat;
+            }
+          });
+          
+          setDailyStats({ loading: false, highestApp: maxApp, dailyTotalSeconds: total });
+        } catch(err) {
+          console.error("Failed to fetch daily stats", err);
+          setDailyStats({ loading: false, highestApp: null, dailyTotalSeconds: 0 });
+        }
+      })
+      .catch(err => {
+        console.error(err);
+        setDailyStats({ loading: false, highestApp: null, dailyTotalSeconds: 0 });
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -107,10 +145,28 @@ const Analytics = () => {
         <div className="py-16 text-center text-slate-500 dark:text-slate-400">Loading analytics...</div>
       ) : (
         <>
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-5 grid-cols-2 sm:grid-cols-2 lg:grid-cols-3">
             {stats.cards.map((item) => (
               <StatsCard key={item.title} title={item.title} value={item.value} meta={item.meta} />
             ))}
+            <StatsCard 
+              title="Highest usage today" 
+              value={
+                dailyStats.loading ? '...' : 
+                dailyStats.highestApp ? (
+                  <div className="flex items-center gap-3">
+                    <RealAppIcon appName={dailyStats.highestApp.appName} />
+                    <span>{dailyStats.highestApp.appName}</span>
+                  </div>
+                ) : '-'
+              } 
+              meta={dailyStats.loading ? 'Loading...' : (dailyStats.highestApp ? formatSeconds(dailyStats.highestApp.secondsUsed) : 'Nothing to show')} 
+            />
+            <StatsCard 
+              title="Daily screen time" 
+              value={dailyStats.loading ? '...' : formatSeconds(dailyStats.dailyTotalSeconds)} 
+              meta="Tracked apps today" 
+            />
           </div>
 
           <div className="grid gap-5 lg:grid-cols-3">

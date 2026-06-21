@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { challengeApi } from '../api';
 import { getToken, getUserFromToken } from '../auth';
 import PrizePoolPreview from '../components/PrizePoolPreview';
+import { RealAppIcon } from '../components/AppIcon';
 
 const InvitePage = () => {
   const { code } = useParams();
@@ -47,7 +48,15 @@ const InvitePage = () => {
       <div className="mt-8 space-y-4 rounded-3xl border border-slate-800 bg-slate-950 p-6">
         <p className="text-sm uppercase tracking-[0.2em] text-slate-400">Challenge</p>
         <h2 className="text-2xl font-semibold text-white">{challenge.title}</h2>
-        <p className="text-slate-300">Tracking: {challenge.apps.join(', ')}</p>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-slate-300 mr-2">Tracking:</span>
+          {challenge.apps.map((app) => (
+            <span key={app} className="inline-flex items-center gap-2 rounded-full border border-slate-700 bg-slate-900 px-3 py-1.5 text-xs text-slate-200">
+              <RealAppIcon appName={app} />
+              {app}
+            </span>
+          ))}
+        </div>
         <p className="text-slate-400">
           Ends: {challenge.status === 'pending' ? 'Starts when you join' : new Date(challenge.endDate).toLocaleString()}
         </p>
