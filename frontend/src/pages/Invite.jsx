@@ -11,6 +11,8 @@ const InvitePage = () => {
   const [challenge, setChallenge] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [isAccepting, setIsAccepting] = useState(false);
+  const [isRejecting, setIsRejecting] = useState(false);
   const currentUser = getUserFromToken();
 
   useEffect(() => {
@@ -27,10 +29,15 @@ const InvitePage = () => {
 
   const respond = async (accepted) => {
     try {
+      if (accepted) setIsAccepting(true);
+      else setIsRejecting(true);
+      
       await challengeApi.respond(code, accepted);
       navigate('/dashboard');
     } catch (err) {
       setError(err.message);
+      if (accepted) setIsAccepting(false);
+      else setIsRejecting(false);
     }
   };
 
@@ -64,7 +71,28 @@ const InvitePage = () => {
           Duration: {challenge.durationType === 'custom' ? `${challenge.durationValue} days` : challenge.durationType === 'week' ? '7 days' : challenge.durationType === 'month' ? '30 days' : '1 day'}
         </p>
         <p className="text-sm text-slate-500">Created by {challenge.creator?.name || challenge.creator?.email}</p>
-        <div className="pt-2 border-t border-slate-800">
+        
+        <div className="grid grid-cols-2 sm:grid-cols-2 gap-4 py-4 border-y border-slate-800 my-4">
+          {/* Future feature: Real money/credits entry fee
+          <div>
+            <p className="text-xs uppercase tracking-wider text-slate-500">Entry Fee</p>
+            <p className="mt-1 font-bold text-brand-400">{challenge.entryFee > 0 ? `${challenge.entryFee} Credits` : 'Free'}</p>
+          </div>
+          */}
+          <div>
+            <p className="text-xs uppercase tracking-wider text-slate-500">Max Players</p>
+            <p className="mt-1 font-bold text-slate-200">{challenge.maxParticipants}</p>
+          </div>
+          <div className="col-span-2 sm:col-span-1">
+            <p className="text-xs uppercase tracking-wider text-slate-500">Structure</p>
+            <p className="mt-1 font-bold text-slate-200">
+              {challenge.payoutStructure === 'winner_takes_all' ? 'Winner Takes All' : 
+               challenge.payoutStructure === 'top_half' ? 'Top Half Split' : 'Top 3 Tiered'}
+            </p>
+          </div>
+        </div>
+
+        <div>
           <p className="text-sm text-slate-400">Participants ({challenge.participants.length})</p>
           <div className="mt-2 flex flex-wrap gap-2">
             {challenge.participants.map((p, idx) => (
@@ -77,7 +105,14 @@ const InvitePage = () => {
       </div>
 
       <div className="mt-8">
-        <PrizePoolPreview durationType={challenge.durationType} durationValue={challenge.durationValue} />
+        <PrizePoolPreview 
+          durationType={challenge.durationType} 
+          durationValue={challenge.durationValue} 
+          maxParticipants={challenge.maxParticipants}
+          entryFee={challenge.entryFee}
+          payoutStructure={challenge.payoutStructure}
+          currentParticipants={challenge.participants.length}
+        />
       </div>
 
       {isCreator ? (
@@ -96,11 +131,25 @@ const InvitePage = () => {
         </div>
       ) : (
         <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-          <button onClick={() => respond(true)} className="rounded-3xl bg-brand-500 px-5 py-3 text-sm font-semibold text-white transition hover:bg-brand-400">
-            Accept challenge
+          <button 
+            onClick={() => respond(true)} 
+            disabled={isAccepting || isRejecting}
+            className="inline-flex items-center justify-center rounded-3xl bg-brand-500 px-5 py-3 text-sm font-semibold text-white transition hover:bg-brand-400 disabled:opacity-70 disabled:cursor-not-allowed"
+          >
+            {isAccepting ? (
+              <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+            ) : null}
+            {isAccepting ? 'Accepting...' : 'Accept challenge'}
           </button>
-          <button onClick={() => respond(false)} className="rounded-3xl border border-slate-700 bg-slate-950 px-5 py-3 text-sm text-slate-200 transition hover:border-rose-500 hover:text-white">
-            Reject challenge
+          <button 
+            onClick={() => respond(false)} 
+            disabled={isAccepting || isRejecting}
+            className="inline-flex items-center justify-center rounded-3xl border border-slate-700 bg-slate-950 px-5 py-3 text-sm text-slate-200 transition hover:border-rose-500 hover:text-white disabled:opacity-70 disabled:cursor-not-allowed"
+          >
+            {isRejecting ? (
+              <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+            ) : null}
+            {isRejecting ? 'Rejecting...' : 'Reject challenge'}
           </button>
         </div>
       )}

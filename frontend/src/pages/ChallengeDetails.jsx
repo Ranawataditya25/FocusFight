@@ -26,6 +26,8 @@ const ChallengeDetails = () => {
   const [copied, setCopied] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isLeaving, setIsLeaving] = useState(false);
   const [showRemoveConfirm, setShowRemoveConfirm] = useState(null);
   const navigate = useNavigate();
   const currentUser = getUserFromToken();
@@ -45,14 +47,54 @@ const ChallengeDetails = () => {
   if (!challenge) return <div className="py-24 text-center text-rose-300">Challenge not found.</div>;
 
   const formatSeconds = (sec) => {
-    if (!sec) return '0 sec';
+    if (!sec) return '0 min';
     const h = Math.floor(sec / 3600);
     const m = Math.floor((sec % 3600) / 60);
-    const s = sec % 60;
-    if (h > 0) return `${h}h ${m}m ${s}s`;
-    if (m > 0) return `${m}m ${s}s`;
-    return `${s} sec`;
+    if (h > 0) return `${h}h ${m}m`;
+    return `${m}m`;
   };
+
+  const getCreditsForRank = (index) => {
+    let fallbackDays = 1;
+    if (challenge.durationType === 'week') fallbackDays = 7;
+    else if (challenge.durationType === 'month') fallbackDays = 30;
+    else if (challenge.durationType === 'custom') fallbackDays = challenge.durationValue || 7;
+    
+    const participantsCount = challenge.participants.length;
+    const entryFee = challenge.entryFee || 0;
+    const totalPrizePool = entryFee > 0 ? (entryFee * participantsCount) : (fallbackDays * 10 * participantsCount);
+
+    let effectivePayoutStructure = challenge.payoutStructure;
+    if (participantsCount <= 2) {
+      effectivePayoutStructure = 'winner_takes_all';
+    } else if (participantsCount === 3 && challenge.payoutStructure === 'top_half') {
+      effectivePayoutStructure = 'top_3';
+    }
+
+    let rankPercentages = [];
+    if (effectivePayoutStructure === 'winner_takes_all') {
+      rankPercentages = [1.0];
+    } else if (effectivePayoutStructure === 'top_3') {
+      rankPercentages = [0.5, 0.3, 0.2];
+    } else if (effectivePayoutStructure === 'top_half') {
+      const winnersCount = Math.max(1, Math.floor(participantsCount / 2));
+      const split = 1.0 / winnersCount;
+      rankPercentages = Array(winnersCount).fill(split);
+    }
+
+    if (index >= rankPercentages.length) return 0;
+    
+    if (index === rankPercentages.length - 1) {
+      let totalGiven = 0;
+      for (let j = 0; j < index; j++) {
+        totalGiven += Math.floor(totalPrizePool * rankPercentages[j]);
+      }
+      return totalPrizePool - totalGiven;
+    }
+    return Math.floor(totalPrizePool * rankPercentages[index]);
+  };
+
+  const sortedParticipants = challenge ? [...challenge.participants].sort((a, b) => (a.usageSeconds || 0) - (b.usageSeconds || 0)) : [];
 
   const chartData = challenge ? challenge.apps.map(appName => {
     // find latest record for this app
@@ -75,21 +117,25 @@ const ChallengeDetails = () => {
 
   const handleDelete = async () => {
     try {
+      setIsDeleting(true);
       await challengeApi.delete(challenge._id);
       navigate('/dashboard');
     } catch (err) {
       console.error(err);
       alert('Failed to delete challenge');
+      setIsDeleting(false);
     }
   };
 
   const handleLeave = async () => {
     try {
+      setIsLeaving(true);
       await challengeApi.delete(challenge._id);
       navigate('/dashboard');
     } catch (err) {
       console.error(err);
       alert('Failed to leave challenge');
+      setIsLeaving(false);
     }
   };
 
@@ -118,37 +164,46 @@ const ChallengeDetails = () => {
               <span className="rounded-full border border-slate-200 bg-slate-100 px-3 py-2 dark:border-slate-700 dark:bg-slate-900">Status {challenge.status}</span>
             </div>
           </div>
-          <div className="space-y-3">
-            <p className="text-sm uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400">Invite Code</p>
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <input
-                readOnly
-                value={challenge.inviteCode}
-                className="w-full sm:w-40 text-center text-xl font-bold tracking-widest rounded-3xl border border-slate-300 bg-slate-50 px-4 py-3 text-slate-900 outline-none dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
-              />
-              <button
-                type="button"
-                onClick={copyCode}
-                className="inline-flex items-center justify-center rounded-3xl bg-brand-500 px-5 py-3 text-sm font-semibold text-white transition hover:bg-brand-400 whitespace-nowrap"
-              >
-                {copied ? 'Copied!' : 'Copy code'}
-              </button>
-            {currentUser && currentUser.id === challenge.creator._id && (
-              <div className="mt-2 flex gap-2 w-full">
-                <button onClick={() => setShowDeleteConfirm(true)} className="rounded-3xl border border-rose-400 w-full sm:w-auto px-4 py-2 text-sm text-rose-600 transition hover:bg-rose-50 dark:hover:bg-rose-500/10">Delete</button>
+          {challenge.status !== 'completed' && (
+            <div className="space-y-3">
+              <p className="text-sm uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400">Invite Code</p>
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <input
+                  readOnly
+                  value={challenge.inviteCode}
+                  className="w-full sm:w-40 text-center text-xl font-bold tracking-widest rounded-3xl border border-slate-300 bg-slate-50 px-4 py-3 text-slate-900 outline-none dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                />
+                <button
+                  type="button"
+                  onClick={copyCode}
+                  className="inline-flex items-center justify-center rounded-3xl bg-brand-500 px-5 py-3 text-sm font-semibold text-white transition hover:bg-brand-400 whitespace-nowrap"
+                >
+                  {copied ? 'Copied!' : 'Copy code'}
+                </button>
+              {currentUser && currentUser.id === challenge.creator._id && (
+                <div className="mt-2 flex gap-2 w-full">
+                  <button onClick={() => setShowDeleteConfirm(true)} className="rounded-3xl border border-rose-400 w-full sm:w-auto px-4 py-2 text-sm text-rose-600 transition hover:bg-rose-50 dark:hover:bg-rose-500/10">Delete</button>
+                </div>
+              )}
+              {currentUser && currentUser.id !== challenge.creator._id && (
+                <div className="mt-2 flex gap-2">
+                  <button onClick={() => setShowLeaveConfirm(true)} className="rounded-3xl border border-slate-300 px-4 py-2 text-sm">Leave</button>
+                </div>
+              )}
               </div>
-            )}
-            {currentUser && currentUser.id !== challenge.creator._id && (
-              <div className="mt-2 flex gap-2">
-                <button onClick={() => setShowLeaveConfirm(true)} className="rounded-3xl border border-slate-300 px-4 py-2 text-sm">Leave</button>
-              </div>
-            )}
             </div>
-          </div>
+          )}
         </div>
 
         <div className="mt-6">
-          <PrizePoolPreview durationType={challenge.durationType} durationValue={challenge.durationValue} />
+          <PrizePoolPreview 
+            durationType={challenge.durationType} 
+            durationValue={challenge.durationValue} 
+            maxParticipants={challenge.maxParticipants}
+            entryFee={challenge.entryFee}
+            payoutStructure={challenge.payoutStructure}
+            currentParticipants={challenge.participants.length}
+          />
         </div>
 
         <div className="mt-6 flex flex-wrap gap-3">
@@ -161,41 +216,71 @@ const ChallengeDetails = () => {
         </div>
       </div>
 
-      <div className="grid gap-5 lg:grid-cols-2">
+      <div className={`grid gap-5 ${challenge.status === 'completed' ? 'lg:grid-cols-1' : 'lg:grid-cols-2'}`}>
         <div className="rounded-3xl border border-slate-200/20 bg-white/80 p-6 shadow-soft backdrop-blur-xl dark:border-slate-700/60 dark:bg-slate-950/85">
-          <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Participant summary</h2>
+          <h2 className="text-xl font-semibold text-slate-900 dark:text-white">
+            {challenge.status === 'completed' ? 'Final Results' : 'Participant summary'}
+          </h2>
           <div className="mt-5 space-y-3">
-            {challenge.participants.map((participant) => (
-              <div key={participant.user._id} className="flex items-center justify-between rounded-3xl bg-slate-50 p-4 dark:bg-slate-900">
-                <div>
-                  <div className="font-semibold text-slate-900 dark:text-white">
-                    {participant.user.name} 
-                    {currentUser && participant.user._id === currentUser.id && (
-                      <span className="ml-2 text-brand-500 text-xs font-bold uppercase tracking-wider bg-brand-500/10 px-2 py-0.5 rounded-full">(You)</span>
+            {challenge.status === 'completed' ? (
+              sortedParticipants.map((participant, index) => {
+                const credits = getCreditsForRank(index);
+                return (
+                  <div key={participant.user._id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-3xl bg-slate-50 p-4 dark:bg-slate-900">
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full font-bold ${index === 0 ? 'bg-yellow-100 text-yellow-600 dark:bg-yellow-500/20 dark:text-yellow-400' : index === 1 ? 'bg-slate-200 text-slate-600 dark:bg-slate-800 dark:text-slate-300' : index === 2 ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-500' : 'bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400'}`}>
+                        #{index + 1}
+                      </div>
+                      <p className="truncate font-semibold text-slate-900 dark:text-white">
+                        {participant.user.name}
+                        {currentUser && participant.user._id === currentUser.id && (
+                          <span className="ml-3 shrink-0 text-xs font-bold uppercase tracking-wider text-brand-500 bg-brand-500/10 px-2 py-1 rounded-full">(You)</span>
+                        )}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-3 shrink-0">
+                      <span className="text-sm font-bold text-slate-600 dark:text-slate-300 w-20 text-right">{formatSeconds(participant.usageSeconds)}</span>
+                      <div className={`rounded-3xl px-3 py-1.5 text-sm font-bold whitespace-nowrap ${credits > 0 ? 'bg-brand-500/10 text-brand-600 dark:text-brand-300' : 'bg-slate-200/50 text-slate-500 dark:bg-slate-800 dark:text-slate-400'}`}>
+                        +{credits} cr
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              challenge.participants.map((participant) => (
+                <div key={participant.user._id} className="flex items-center justify-between rounded-3xl bg-slate-50 p-4 dark:bg-slate-900">
+                  <div>
+                    <div className="font-semibold text-slate-900 dark:text-white">
+                      {participant.user.name} 
+                      {currentUser && participant.user._id === currentUser.id && (
+                        <span className="ml-2 text-brand-500 text-xs font-bold uppercase tracking-wider bg-brand-500/10 px-2 py-0.5 rounded-full">(You)</span>
+                      )}
+                    </div>
+                    <div className="text-sm text-slate-500 dark:text-slate-400">{participant.accepted ? 'Accepted' : 'Pending'}</div>
+                    {currentUser && currentUser.id === challenge.creator._id && (
+                      <div className="text-xs text-slate-500 dark:text-slate-400">{participant.user.email}</div>
                     )}
                   </div>
-                  <div className="text-sm text-slate-500 dark:text-slate-400">{participant.accepted ? 'Accepted' : 'Pending'}</div>
-                  {currentUser && currentUser.id === challenge.creator._id && (
-                    <div className="text-xs text-slate-500 dark:text-slate-400">{participant.user.email}</div>
-                  )}
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm text-slate-600 dark:text-slate-300">{formatSeconds(participant.usageSeconds)}</span>
+                    {currentUser && currentUser.id === challenge.creator._id && participant.user._id !== currentUser.id && (
+                      <button
+                        onClick={() => setShowRemoveConfirm(participant.user._id)}
+                        className="rounded-2xl border border-rose-400 px-3 py-1 text-xs text-rose-600"
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-sm text-slate-600 dark:text-slate-300">{formatSeconds(participant.usageSeconds)}</span>
-                  {currentUser && currentUser.id === challenge.creator._id && participant.user._id !== currentUser.id && (
-                    <button
-                      onClick={() => setShowRemoveConfirm(participant.user._id)}
-                      className="rounded-2xl border border-rose-400 px-3 py-1 text-xs text-rose-600"
-                    >
-                      Remove
-                    </button>
-                  )}
-                </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
-        <div className="rounded-3xl border border-slate-200/20 bg-white/80 p-6 shadow-soft backdrop-blur-xl dark:border-slate-700/60 dark:bg-slate-950/85">
-          <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Usage trend</h2>
+        {challenge.status !== 'completed' && (
+          <div className="rounded-3xl border border-slate-200/20 bg-white/80 p-6 shadow-soft backdrop-blur-xl dark:border-slate-700/60 dark:bg-slate-950/85">
+            <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Usage trend</h2>
           <div className="mt-6 h-72 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData} margin={{ top: 20, right: 0, left: -20, bottom: 0 }}>
@@ -223,6 +308,7 @@ const ChallengeDetails = () => {
             </ResponsiveContainer>
           </div>
         </div>
+        )}
       </div>
 
       {showDeleteConfirm && (
@@ -241,9 +327,13 @@ const ChallengeDetails = () => {
               </button>
               <button
                 onClick={handleDelete}
-                className="rounded-3xl bg-rose-500 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-rose-400"
+                disabled={isDeleting}
+                className="inline-flex items-center justify-center rounded-3xl bg-rose-500 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-rose-400 disabled:opacity-70 disabled:cursor-not-allowed"
               >
-                Delete permanently
+                {isDeleting ? (
+                  <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                ) : null}
+                {isDeleting ? 'Deleting...' : 'Delete permanently'}
               </button>
             </div>
           </div>
@@ -266,9 +356,13 @@ const ChallengeDetails = () => {
               </button>
               <button
                 onClick={handleLeave}
-                className="rounded-3xl border border-slate-700 bg-slate-900 px-5 py-2.5 text-sm font-semibold text-slate-200 transition hover:border-rose-500 hover:text-white dark:border-slate-600 dark:bg-slate-800"
+                disabled={isLeaving}
+                className="inline-flex items-center justify-center rounded-3xl border border-slate-700 bg-slate-900 px-5 py-2.5 text-sm font-semibold text-slate-200 transition hover:border-rose-500 hover:text-white dark:border-slate-600 dark:bg-slate-800 disabled:opacity-70 disabled:cursor-not-allowed"
               >
-                Leave challenge
+                {isLeaving ? (
+                  <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                ) : null}
+                {isLeaving ? 'Leaving...' : 'Leave challenge'}
               </button>
             </div>
           </div>

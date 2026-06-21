@@ -5,6 +5,7 @@ import Landing from './pages/Landing';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
+import AllChallenges from './pages/AllChallenges';
 import CreateChallenge from './pages/CreateChallenge';
 import InvitePage from './pages/Invite';
 import ChallengeDetails from './pages/ChallengeDetails';
@@ -59,6 +60,16 @@ function App() {
     };
   }, []);
 
+  const refreshUser = async () => {
+    if (!getToken()) return;
+    try {
+      const result = await authApi.me();
+      setUser(result.user);
+    } catch {
+      // silent fail
+    }
+  };
+
   useEffect(() => {
     const token = getToken();
     if (!token) {
@@ -104,7 +115,6 @@ function App() {
   const handleLogout = () => {
     removeToken();
     setUser(null);
-    navigate('/');
   };
 
   const toggleTheme = () => setTheme((current) => (current === 'dark' ? 'light' : 'dark'));
@@ -139,13 +149,14 @@ function App() {
           <Route path="/register" element={<Register onAuth={handleAuthSuccess} theme={theme} toggleTheme={toggleTheme} />} />
           <Route path="/invite/:code" element={<InvitePage />} />
           <Route element={<ProtectedRoute user={user} loading={loading} />}>
-            <Route path="/dashboard" element={<Dashboard user={user} />} />
+            <Route path="/dashboard" element={<Dashboard user={user} refreshUser={refreshUser} />} />
+            <Route path="/challenges" element={<AllChallenges user={user} />} />
             <Route path="/create" element={<CreateChallenge user={user} />} />
-            <Route path="/challenge/:code" element={<ChallengeDetails />} />
+            <Route path="/challenge/:code" element={<ChallengeDetails refreshUser={refreshUser} />} />
             <Route path="/analytics" element={<Analytics />} />
             <Route path="/leaderboard" element={<Leaderboard />} />
             <Route path="/notifications" element={<Notifications onUnreadCountChange={setUnreadCount} />} />
-            <Route path="/profile" element={<Profile user={user} />} />
+            <Route path="/profile" element={<Profile user={user} onLogout={handleLogout} refreshUser={refreshUser} />} />
             <Route path="/settings" element={<Settings user={user} />} />
           </Route>
           <Route path="*" element={<NotFound />} />

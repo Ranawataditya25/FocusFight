@@ -26,6 +26,7 @@ export const authApi = {
   register: (body) => request('/auth/register', { method: 'POST', body }),
   login: (body) => request('/auth/login', { method: 'POST', body }),
   me: () => request('/auth/me'),
+  leaderboard: () => request('/auth/leaderboard'),
 };
 
 export const challengeApi = {

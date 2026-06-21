@@ -20,6 +20,9 @@ const CreateChallenge = () => {
     apps: ['Instagram', 'YouTube'],
     durationType: 'week',
     durationValue: 7,
+    maxParticipants: 10,
+    entryFee: 0,
+    payoutStructure: 'top_3',
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -68,6 +71,9 @@ const CreateChallenge = () => {
         apps: state.apps,
         durationType: state.durationType,
         durationValue: state.durationValue,
+        maxParticipants: state.maxParticipants,
+        entryFee: state.entryFee,
+        payoutStructure: state.payoutStructure,
       };
       const result = await challengeApi.create(payload);
       setCreatedChallenge(result.challenge);
@@ -180,24 +186,31 @@ const CreateChallenge = () => {
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">
               <span className="mb-2 block">Duration</span>
               <div className="grid gap-3 sm:grid-cols-2">
-                <select
-                  value={state.durationType}
-                  onChange={(e) => {
-                    const option = durationOptions.find((item) => item.value === e.target.value);
-                    setState({
-                      ...state,
-                      durationType: option.value,
-                      durationValue: option.durationValue,
-                    });
-                  }}
-                  className="w-full rounded-3xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-brand-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
-                >
-                  {durationOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
+                <div className="relative">
+                  <select
+                    value={state.durationType}
+                    onChange={(e) => {
+                      const option = durationOptions.find((item) => item.value === e.target.value);
+                      setState({
+                        ...state,
+                        durationType: option.value,
+                        durationValue: option.durationValue,
+                      });
+                    }}
+                    className="w-full appearance-none rounded-3xl border border-slate-300 bg-white px-4 pr-10 py-3 text-slate-900 outline-none transition focus:border-brand-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+                  >
+                    {durationOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 dark:text-slate-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                  </div>
+                </div>
                 {state.durationType === 'custom' && (
                   <input
                     type="number"
@@ -212,7 +225,71 @@ const CreateChallenge = () => {
               </div>
             </label>
 
-            <PrizePoolPreview durationType={state.durationType} durationValue={state.durationValue} />
+            <div className="grid gap-6 sm:grid-cols-2">
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">
+                <span className="mb-2 block">Max participants <span className="text-xs font-normal text-slate-500 dark:text-slate-400">(including you)</span></span>
+                <input
+                  type="number"
+                  min="2"
+                  max="100"
+                  value={state.maxParticipants}
+                  onChange={(e) => {
+                    const maxP = Number(e.target.value);
+                    let payout = state.payoutStructure;
+                    if (maxP <= 2) payout = 'winner_takes_all';
+                    else if (maxP === 3 && payout === 'top_half') payout = 'top_3';
+                    setState({ ...state, maxParticipants: maxP, payoutStructure: payout });
+                  }}
+                  className="w-full rounded-3xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-brand-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+                />
+              </label>
+              {/* Future feature: Real money/credits entry fee
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">
+                <span className="mb-2 block">Entry fee (Credits)</span>
+                <input
+                  type="number"
+                  min="0"
+                  max="1000"
+                  step="10"
+                  value={state.entryFee}
+                  onChange={(e) => setState({ ...state, entryFee: Number(e.target.value) })}
+                  className="w-full rounded-3xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-brand-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+                />
+              </label>
+              */}
+            </div>
+
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">
+              <span className="mb-2 block">Payout Structure</span>
+              <div className="relative">
+                <select
+                  value={state.payoutStructure}
+                  onChange={(e) => setState({ ...state, payoutStructure: e.target.value })}
+                  className="w-full appearance-none rounded-3xl border border-slate-300 bg-white px-4 pr-10 py-3 text-slate-900 outline-none transition focus:border-brand-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+                >
+                  {state.maxParticipants > 2 && (
+                    <option value="top_3">Top 3 Tiered (50% / 30% / 20%)</option>
+                  )}
+                  <option value="winner_takes_all">Winner Takes All (100% to 1st)</option>
+                  {state.maxParticipants > 3 && (
+                    <option value="top_half">Top Half Split (Evenly across top 50%)</option>
+                  )}
+                </select>
+                <div className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 dark:text-slate-400">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                  </svg>
+                </div>
+              </div>
+            </label>
+
+            <PrizePoolPreview 
+              maxParticipants={state.maxParticipants} 
+              entryFee={state.entryFee} 
+              payoutStructure={state.payoutStructure} 
+              durationType={state.durationType} 
+              durationValue={state.durationValue} 
+            />
 
             <div className="pt-6"> </div>
           </div>

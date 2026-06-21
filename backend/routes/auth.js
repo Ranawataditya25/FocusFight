@@ -51,4 +51,13 @@ router.get('/me', auth, async (req, res) => {
   return res.json({ user });
 });
 
+router.get('/leaderboard', auth, async (req, res) => {
+  try {
+    const users = await User.find().sort({ credits: -1 }).limit(50).select('name email credits');
+    return res.json({ leaderboard: users });
+  } catch (error) {
+    return res.status(500).json({ message: 'Failed to fetch leaderboard', error: error.message });
+  }
+});
+
 module.exports = router;

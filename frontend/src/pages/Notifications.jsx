@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { notificationApi } from '../api';
 
 const ChallengeGroupCard = ({ group, markRead }) => {
@@ -42,7 +43,15 @@ const ChallengeGroupCard = ({ group, markRead }) => {
                     )}
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2 mt-3 sm:mt-0">
+                  {item.challenge?.inviteCode && (
+                    <Link
+                      to={`/challenge/${item.challenge.inviteCode}`}
+                      className="rounded-2xl border border-brand-200 bg-brand-50 px-3 py-1 text-xs font-medium text-brand-700 transition hover:bg-brand-100 dark:border-brand-900/50 dark:bg-brand-900/20 dark:text-brand-300 dark:hover:bg-brand-900/40"
+                    >
+                      View Results
+                    </Link>
+                  )}
                   {!item.read && (
                     <>
                       <span className="rounded-full bg-brand-500/15 px-3 py-1 text-xs font-semibold text-brand-700 dark:text-brand-100">New</span>

@@ -7,7 +7,7 @@ const router = express.Router();
 router.get('/', auth, async (req, res) => {
   const notifications = await Notification.find({ user: req.user.id })
     .sort({ createdAt: -1 })
-    .populate('challenge', 'title');
+    .populate('challenge', 'title inviteCode');
   return res.json({ notifications });
 });
 

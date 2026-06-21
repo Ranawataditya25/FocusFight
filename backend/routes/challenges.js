@@ -20,7 +20,18 @@ const formatUser = (user) => user.name || user.email;
 
 router.post('/', auth, async (req, res) => {
   try {
-    const { title, description, apps, durationType, durationValue } = req.body;
+    const { title, description, apps, durationType, durationValue, maxParticipants = 10, entryFee = 0, payoutStructure = 'top_3' } = req.body;
+    
+    const creatorUser = await User.findById(req.user.id);
+    if (entryFee > 0 && creatorUser.credits < entryFee) {
+      return res.status(400).json({ message: 'Insufficient credits to create this challenge' });
+    }
+
+    if (entryFee > 0) {
+      creatorUser.credits -= entryFee;
+      await creatorUser.save();
+    }
+
     const inviteCode = crypto.randomBytes(8).toString('hex');
     const challenge = await Challenge.create({
       title,
@@ -29,6 +40,9 @@ router.post('/', auth, async (req, res) => {
       apps,
       durationType,
       durationValue,
+      maxParticipants,
+      entryFee,
+      payoutStructure,
       inviteCode,
       participants: [{ user: req.user.id, accepted: true, joinedAt: new Date() }],
       status: 'pending',
@@ -56,7 +70,26 @@ router.post('/:inviteCode/respond', auth, async (req, res) => {
   if (!challenge) return res.status(404).json({ message: 'Challenge not found' });
 
   const existing = challenge.participants.find((p) => p.user.toString() === req.user.id);
+  
+  if (accepted && !existing) {
+    if (challenge.participants.length >= challenge.maxParticipants) {
+      return res.status(400).json({ message: 'This challenge is already full.' });
+    }
+    
+    const joinerUser = await User.findById(req.user.id);
+    if (challenge.entryFee > 0 && joinerUser.credits < challenge.entryFee) {
+      return res.status(400).json({ message: `Insufficient credits. You need ${challenge.entryFee} credits to join.` });
+    }
+
+    if (challenge.entryFee > 0) {
+      joinerUser.credits -= challenge.entryFee;
+      await joinerUser.save();
+    }
+  }
+
   if (existing) {
+    // If they previously rejected and are now accepting, or vice versa, handle fee (edge case). 
+    // For simplicity, we assume they can only accept once directly.
     existing.accepted = accepted;
     existing.joinedAt = new Date();
   } else {
@@ -96,41 +129,71 @@ router.post('/:id/complete', auth, async (req, res) => {
     const sorted = [...challenge.participants].sort((a, b) => (a.usageSeconds || 0) - (b.usageSeconds || 0));
     const winner = sorted[0];
     
-    // Calculate days
-    let days = 1;
-    if (challenge.durationType === 'week') days = 7;
-    else if (challenge.durationType === 'month') days = 30;
-    else if (challenge.durationType === 'custom') days = challenge.durationValue || 7;
+    const validParticipantsCount = sorted.length;
+    let fallbackDays = 1;
+    if (challenge.durationType === 'week') fallbackDays = 7;
+    else if (challenge.durationType === 'month') fallbackDays = 30;
+    else if (challenge.durationType === 'custom') fallbackDays = challenge.durationValue || 7;
+
+    const totalPrizePool = challenge.entryFee > 0 ? (challenge.entryFee * validParticipantsCount) : (fallbackDays * 10 * validParticipantsCount);
+    const payoutStructure = challenge.payoutStructure || 'top_3';
     
-    const totalPrize = days * 10;
+    let effectivePayoutStructure = payoutStructure;
+    if (validParticipantsCount <= 2) {
+      effectivePayoutStructure = 'winner_takes_all';
+    } else if (validParticipantsCount === 3 && payoutStructure === 'top_half') {
+      effectivePayoutStructure = 'top_3';
+    }
     
-    // Distribute rank-based credits
-    const updates = sorted.map((p, index) => {
-      let creditsToAward = 0;
-      if (index === 0) creditsToAward = totalPrize;
-      else if (index === 1) creditsToAward = Math.floor(totalPrize * 0.5);
-      else if (index === 2) creditsToAward = Math.floor(totalPrize * 0.25);
-      else creditsToAward = Math.floor(totalPrize * 0.1);
+    let rankPercentages = [];
+    if (effectivePayoutStructure === 'winner_takes_all') {
+      rankPercentages = [1.0];
+    } else if (effectivePayoutStructure === 'top_3') {
+      rankPercentages = [0.5, 0.3, 0.2];
+    } else if (effectivePayoutStructure === 'top_half') {
+      const winnersCount = Math.max(1, Math.floor(validParticipantsCount / 2));
+      const split = 1.0 / winnersCount;
+      rankPercentages = Array(winnersCount).fill(split);
+    }
+
+    const calculateCredits = (index) => {
+      if (index >= rankPercentages.length) return 0;
       
-      return User.findByIdAndUpdate(p.user._id, { $inc: { credits: creditsToAward } });
+      // If this is the last percentage rank, give it the remainder to avoid flooring loss
+      if (index === rankPercentages.length - 1) {
+        let totalGiven = 0;
+        for (let j = 0; j < index; j++) {
+          totalGiven += Math.floor(totalPrizePool * rankPercentages[j]);
+        }
+        return totalPrizePool - totalGiven;
+      }
+      return Math.floor(totalPrizePool * rankPercentages[index]);
+    };
+
+    const updates = sorted.map((p, index) => {
+      return User.findByIdAndUpdate(p.user._id, { $inc: { credits: calculateCredits(index) } });
     });
     await Promise.all(updates);
     
     await challenge.save();
 
+    const formatTime = (sec) => {
+      if (!sec) return '0m';
+      const h = Math.floor(sec / 3600);
+      const m = Math.floor((sec % 3600) / 60);
+      if (h > 0) return `${h}h ${m}m`;
+      return `${m}m`;
+    };
+
     // Send personalized rank notifications
     if (winner && winner.user) {
       const winnerName = formatUser(winner.user);
-      const winnerTime = `${Math.floor((winner.usageSeconds || 0) / 60)}m ${(winner.usageSeconds || 0) % 60}s`;
+      const winnerTime = formatTime(winner.usageSeconds);
 
       await Promise.all(sorted.map((p, index) => {
-        let creditsToAward = 0;
-        if (index === 0) creditsToAward = totalPrize;
-        else if (index === 1) creditsToAward = Math.floor(totalPrize * 0.5);
-        else if (index === 2) creditsToAward = Math.floor(totalPrize * 0.25);
-        else creditsToAward = Math.floor(totalPrize * 0.1);
+        const creditsToAward = calculateCredits(index);
 
-        const pTime = `${Math.floor((p.usageSeconds || 0) / 60)}m ${(p.usageSeconds || 0) % 60}s`;
+        const pTime = formatTime(p.usageSeconds);
         let rankText = index === 0 ? '1st' : index === 1 ? '2nd' : index === 2 ? '3rd' : `${index + 1}th`;
         
         const message = index === 0

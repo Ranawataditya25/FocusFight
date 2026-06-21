@@ -46,16 +46,6 @@ const TopNav = ({ theme, onToggleTheme, onLogout }) => {
               </svg>
             )}
           </button>
-          <button
-            type="button"
-            onClick={onLogout}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-200/60 bg-white/90 text-rose-600 transition hover:bg-rose-50 dark:border-slate-700/60 dark:bg-slate-950/90 dark:text-rose-400"
-            title="Log out"
-          >
-            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />
-            </svg>
-          </button>
         </div>
       </div>
     </header>

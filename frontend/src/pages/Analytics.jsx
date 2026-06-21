@@ -1,21 +1,30 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { challengeApi } from '../api';
+import { challengeApi, authApi } from '../api';
+import { getUserFromToken } from '../auth';
 import StatsCard from '../components/StatsCard';
 import { RealAppIcon } from '../components/AppIcon';
+import { formatSeconds } from '../utils/timeFormat';
 
 const Analytics = () => {
   const navigate = useNavigate();
   const [challenges, setChallenges] = useState([]);
   const [loading, setLoading] = useState(true);
+  const currentUser = getUserFromToken();
 
   const [dailyStats, setDailyStats] = useState({ loading: true, highestApp: null, dailyTotalSeconds: 0 });
 
+  const [globalLeaderboard, setGlobalLeaderboard] = useState([]);
+
   useEffect(() => {
-    challengeApi.list()
-      .then(async (result) => {
+    Promise.all([
+      challengeApi.list(),
+      authApi.leaderboard().catch(() => ({ leaderboard: [] }))
+    ])
+      .then(async ([result, leaderboardResult]) => {
         const userChallenges = result.challenges || [];
         setChallenges(userChallenges);
+        setGlobalLeaderboard(leaderboardResult.leaderboard || []);
         
         try {
           const { getAndroidUsageStats } = await import('../utils/usageTracker');
@@ -83,28 +92,6 @@ const Analytics = () => {
     const validChallenges = active + completed;
     const completionRate = validChallenges > 0 ? Math.round((completed / validChallenges) * 100) : 0;
 
-    // Build global top performers
-    const userMap = {};
-    challenges.forEach((c) => {
-      c.participants.forEach((p) => {
-        if (p.user && p.usageSeconds !== undefined) {
-          const uid = p.user._id;
-          if (!userMap[uid]) {
-            userMap[uid] = {
-              name: p.user.name || p.user.email,
-              usageSeconds: 0,
-              credits: p.user.credits || 0,
-            };
-          }
-          userMap[uid].usageSeconds += p.usageSeconds;
-        }
-      });
-    });
-    // Sort by lowest usage (best performers) and grab top 3
-    const topPerformers = Object.values(userMap)
-      .sort((a, b) => a.usageSeconds - b.usageSeconds)
-      .slice(0, 3);
-
     return {
       cards: [
         { title: 'Total tracking', value: challenges.length, meta: 'All challenges joined or created' },
@@ -114,18 +101,9 @@ const Analytics = () => {
       ],
       under20MinsCount,
       avgText,
-      completionRate,
-      topPerformers
+      completionRate
     };
   }, [challenges]);
-
-  const formatSeconds = (sec) => {
-    if (!sec) return '0 min';
-    const h = Math.floor(sec / 3600);
-    const m = Math.floor((sec % 3600) / 60);
-    if (h > 0) return `${h}h ${m}m`;
-    return `${m}m`;
-  };
 
   return (
     <div className="space-y-8">
@@ -198,27 +176,32 @@ const Analytics = () => {
             </div>
 
             {/* Global Top Performers */}
-            <div className="rounded-3xl border border-slate-200/20 bg-white/80 p-6 shadow-soft backdrop-blur-xl dark:border-slate-700/60 dark:bg-slate-950/85">
-              <h2 className="text-xl font-semibold text-slate-900 dark:text-white mb-5">Global Leaderboard</h2>
-              {stats.topPerformers.length === 0 ? (
+            <div className="rounded-3xl border border-slate-200/20 bg-white/80 p-6 shadow-soft backdrop-blur-xl dark:border-slate-700/60 dark:bg-slate-950/85 self-start">
+              <div className="flex items-center justify-between mb-5">
+                <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Global Leaderboard</h2>
+                <button onClick={() => navigate('/leaderboard')} className="text-sm font-semibold text-brand-500 hover:text-brand-400">View all</button>
+              </div>
+              {globalLeaderboard.length === 0 ? (
                 <div className="py-10 text-center text-sm text-slate-500 dark:text-slate-400">
                   No participant data available yet.
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {stats.topPerformers.map((user, i) => (
-                    <div key={i} className="flex items-center gap-4 rounded-2xl bg-slate-50 p-4 dark:bg-slate-900">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-100 text-brand-600 dark:bg-brand-500/20 dark:text-brand-300 font-bold">
-                        #{i + 1}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="truncate font-semibold text-slate-900 dark:text-white">{user.name}</p>
-                        <p className="mt-0.5 text-xs font-semibold text-brand-600 dark:text-brand-400">{user.credits} Credits Earned</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm font-bold text-slate-700 dark:text-slate-300">
-                          {formatSeconds(user.usageSeconds)}
+                  {globalLeaderboard.slice(0, 3).map((user, i) => (
+                    <div key={user._id} className="flex items-center justify-between gap-4 rounded-2xl bg-slate-50 p-4 dark:bg-slate-900">
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full font-bold ${i === 0 ? 'bg-yellow-100 text-yellow-600 dark:bg-yellow-500/20 dark:text-yellow-400' : i === 1 ? 'bg-slate-200 text-slate-600 dark:bg-slate-800 dark:text-slate-300' : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-500'}`}>
+                          #{i + 1}
+                        </div>
+                        <p className="truncate font-semibold text-slate-900 dark:text-white">
+                          {user.name || user.email}
+                          {currentUser && (user._id === currentUser.id || user._id === currentUser._id) && (
+                            <span className="ml-3 shrink-0 text-xs font-bold uppercase tracking-wider text-brand-500 bg-brand-500/10 px-2 py-1 rounded-full">(You)</span>
+                          )}
                         </p>
+                      </div>
+                      <div className="shrink-0 whitespace-nowrap rounded-3xl bg-brand-500/10 px-3 py-1.5 text-sm font-bold text-brand-600 dark:text-brand-300">
+                        {user.credits || 0} cr
                       </div>
                     </div>
                   ))}

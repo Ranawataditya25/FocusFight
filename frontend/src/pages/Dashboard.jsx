@@ -6,7 +6,11 @@ import { hasUsagePermission, requestUsagePermission, syncAllChallengesUsage } fr
 import { App as CapacitorApp } from '@capacitor/app';
 import { RealAppIcon } from '../components/AppIcon';
 
-const Dashboard = ({ user }) => {
+const Dashboard = ({ user, refreshUser }) => {
+  useEffect(() => {
+    if (refreshUser) refreshUser();
+  }, [refreshUser]);
+
   const [challenges, setChallenges] = useState([]);
   const [loading, setLoading] = useState(true);
   const [joinCode, setJoinCode] = useState('');
@@ -198,7 +202,7 @@ const Dashboard = ({ user }) => {
               <form onSubmit={handleJoin} className="flex gap-2">
                 <input
                   type="text"
-                  placeholder="Paste 8-char code"
+                  placeholder="Paste code"
                   value={joinCode}
                   onChange={(e) => setJoinCode(e.target.value)}
                   className="w-full sm:w-44 rounded-3xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-brand-500 focus:ring-1 focus:ring-brand-500 dark:border-slate-800 dark:bg-slate-900 dark:text-white"
@@ -226,7 +230,7 @@ const Dashboard = ({ user }) => {
       </div>
 
       <div className="grid gap-4 grid-cols-2 sm:grid-cols-2 lg:grid-cols-4">
-        <StatsCard title="Total challenges" value={challenges.length} meta="Active, pending" />
+        <StatsCard title="Total challenges" value={challenges.length} meta="Active, Pending & Completed" />
         <StatsCard title="Active challenges" value={challenges.filter((item) => item.status === 'active').length} meta="Currently tracking" />
         <StatsCard title="Total participants" value={challenges.reduce((sum, item) => sum + item.participants.length, 0)} meta="Current joined users" />
         <StatsCard title="Credits available" value={user?.credits ?? 0} meta="Redeem on completion" />
@@ -243,21 +247,35 @@ const Dashboard = ({ user }) => {
           <div className="rounded-3xl border border-dashed border-slate-300 p-10 text-center text-slate-500 dark:border-slate-700 dark:text-slate-400">No challenges created yet.</div>
         ) : (
           <div className="grid gap-4">
-            {challenges.map((challenge) => (
+            {challenges.slice(0, 3).map((challenge) => {
+              const isCreator = challenge.creator && challenge.creator._id === user?.id;
+              return (
               <Link key={challenge._id} to={`/challenge/${challenge.inviteCode}`} className="rounded-3xl border border-slate-200 bg-slate-50 p-5 transition hover:border-brand-500 dark:border-slate-800 dark:bg-slate-950">
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <h3 className="text-lg font-semibold text-slate-900 dark:text-white">{challenge.title}</h3>
-                    <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">{challenge.apps.join(', ')}</p>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-start gap-2">
+                      <h3 className="text-lg font-semibold text-slate-900 dark:text-white break-words line-clamp-2">{challenge.title}</h3>
+                      {isCreator && (
+                        <span className="shrink-0 rounded-full bg-brand-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-brand-600 dark:bg-brand-500/20 dark:text-brand-300 mt-1">Creator</span>
+                      )}
+                    </div>
+                    <p className="mt-1 truncate text-sm text-slate-600 dark:text-slate-400">{challenge.apps.join(', ')}</p>
                   </div>
-                  <span className="rounded-full bg-slate-200 px-3 py-1 text-xs uppercase tracking-[0.2em] text-slate-700 dark:bg-slate-800 dark:text-slate-300">{challenge.status}</span>
+                  <span className="shrink-0 w-fit rounded-full bg-slate-200 px-3 py-1 text-xs uppercase tracking-[0.2em] text-slate-700 dark:bg-slate-800 dark:text-slate-300">{challenge.status}</span>
                 </div>
                 <div className="mt-4 flex flex-wrap gap-3 text-sm text-slate-600 dark:text-slate-400">
                   <span>{challenge.participants.length} participants</span>
                   <span>{challenge.status === 'pending' ? 'Starts when joined' : `Ends ${new Date(challenge.endDate).toLocaleDateString()}`}</span>
                 </div>
               </Link>
-            ))}
+            )})}
+            {challenges.length > 3 && (
+              <div className="flex justify-center pt-2">
+                <Link to="/challenges" className="rounded-3xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800">
+                  View all challenges
+                </Link>
+              </div>
+            )}
           </div>
         )}
       </div>
