@@ -4,6 +4,7 @@ import { challengeApi } from '../api';
 import { appOptions, RealAppIcon } from '../components/AppIcon';
 import { Clipboard } from '@capacitor/clipboard';
 import PrizePoolPreview from '../components/PrizePoolPreview';
+import { useChallenges } from '../context/ChallengeContext';
 
 const durationOptions = [
   { label: '1 Day', value: 'day', durationValue: 1 },
@@ -14,6 +15,7 @@ const durationOptions = [
 
 const CreateChallenge = () => {
   const navigate = useNavigate();
+  const { fetchChallenges } = useChallenges();
   const [state, setState] = useState({
     title: '',
     description: '',
@@ -84,6 +86,7 @@ const CreateChallenge = () => {
       setShareLink(result.challenge.inviteCode);
       setSubmitted(true);
       setError('');
+      fetchChallenges(true);
     } catch (err) {
       setError(err.message);
       submitRef.current = false;

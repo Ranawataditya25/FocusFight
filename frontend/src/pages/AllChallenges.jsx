@@ -1,22 +1,16 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { challengeApi } from '../api';
+import { useChallenges } from '../context/ChallengeContext';
 
 const AllChallenges = ({ user }) => {
-  const [challenges, setChallenges] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { challenges, loading } = useChallenges();
   
   const [statusFilter, setStatusFilter] = useState('all');
   const [roleFilter, setRoleFilter] = useState('all');
   const [sortOrder, setSortOrder] = useState('newest');
   const [showFilters, setShowFilters] = useState(false);
 
-  useEffect(() => {
-    challengeApi.list()
-      .then((result) => setChallenges(result.challenges || []))
-      .catch(console.error)
-      .finally(() => setLoading(false));
-  }, []);
+
 
   return (
     <div className="space-y-6">

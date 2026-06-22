@@ -4,10 +4,12 @@ import { challengeApi } from '../api';
 import { getToken, getUserFromToken } from '../auth';
 import PrizePoolPreview from '../components/PrizePoolPreview';
 import { RealAppIcon } from '../components/AppIcon';
+import { useChallenges } from '../context/ChallengeContext';
 
 const InvitePage = () => {
   const { code } = useParams();
   const navigate = useNavigate();
+  const { fetchChallenges } = useChallenges();
   const [challenge, setChallenge] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -33,6 +35,7 @@ const InvitePage = () => {
       else setIsRejecting(true);
       
       await challengeApi.respond(code, accepted);
+      fetchChallenges(true);
       navigate('/dashboard');
     } catch (err) {
       setError(err.message);

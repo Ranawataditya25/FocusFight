@@ -6,6 +6,7 @@ import { BarChart, Bar, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGri
 import { getUserFromToken } from '../auth';
 import { Clipboard } from '@capacitor/clipboard';
 import PrizePoolPreview from '../components/PrizePoolPreview';
+import { useChallenges } from '../context/ChallengeContext';
 
 const CustomTick = (props) => {
   const { x, y, payload } = props;
@@ -20,6 +21,7 @@ const CustomTick = (props) => {
 
 const ChallengeDetails = () => {
   const { code } = useParams();
+  const { fetchChallenges } = useChallenges();
   const [challenge, setChallenge] = useState(null);
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -119,6 +121,7 @@ const ChallengeDetails = () => {
     try {
       setIsDeleting(true);
       await challengeApi.delete(challenge._id);
+      fetchChallenges(true);
       navigate('/dashboard');
     } catch (err) {
       console.error(err);
@@ -131,6 +134,7 @@ const ChallengeDetails = () => {
     try {
       setIsLeaving(true);
       await challengeApi.delete(challenge._id);
+      fetchChallenges(true);
       navigate('/dashboard');
     } catch (err) {
       console.error(err);

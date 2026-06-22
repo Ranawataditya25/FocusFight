@@ -5,62 +5,61 @@ import { getUserFromToken } from '../auth';
 import StatsCard from '../components/StatsCard';
 import { RealAppIcon } from '../components/AppIcon';
 import { formatSeconds } from '../utils/timeFormat';
+import { useChallenges } from '../context/ChallengeContext';
 
 const Analytics = () => {
   const navigate = useNavigate();
-  const [challenges, setChallenges] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { challenges, loading } = useChallenges();
   const currentUser = getUserFromToken();
 
   const [dailyStats, setDailyStats] = useState({ loading: true, highestApp: null, dailyTotalSeconds: 0 });
 
   const [globalLeaderboard, setGlobalLeaderboard] = useState([]);
 
-  useEffect(() => {
-    Promise.all([
-      challengeApi.list(),
-      authApi.leaderboard().catch(() => ({ leaderboard: [] }))
-    ])
-      .then(async ([result, leaderboardResult]) => {
-        const userChallenges = result.challenges || [];
-        setChallenges(userChallenges);
-        setGlobalLeaderboard(leaderboardResult.leaderboard || []);
-        
-        try {
-          const { getAndroidUsageStats } = await import('../utils/usageTracker');
-          const stats = await getAndroidUsageStats();
-          
-          const challengeApps = new Set();
-          userChallenges.forEach(c => c.apps.forEach(app => challengeApps.add(app)));
-          
-          if (challengeApps.size === 0 || stats.length === 0) {
-            setDailyStats({ loading: false, highestApp: null, dailyTotalSeconds: 0 });
-            return;
-          }
+  const [leaderboardLoading, setLeaderboardLoading] = useState(true);
 
-          const dailyTracked = stats.filter(stat => challengeApps.has(stat.appName));
-          let maxApp = null;
-          let total = 0;
-          
-          dailyTracked.forEach(stat => {
-            total += stat.secondsUsed;
-            if (!maxApp || stat.secondsUsed > maxApp.secondsUsed) {
-              maxApp = stat;
-            }
-          });
-          
-          setDailyStats({ loading: false, highestApp: maxApp, dailyTotalSeconds: total });
-        } catch(err) {
-          console.error("Failed to fetch daily stats", err);
-          setDailyStats({ loading: false, highestApp: null, dailyTotalSeconds: 0 });
-        }
-      })
-      .catch(err => {
-        console.error(err);
-        setDailyStats({ loading: false, highestApp: null, dailyTotalSeconds: 0 });
-      })
-      .finally(() => setLoading(false));
+  useEffect(() => {
+    authApi.leaderboard()
+      .then(res => setGlobalLeaderboard(res.leaderboard || []))
+      .catch(() => setGlobalLeaderboard([]))
+      .finally(() => setLeaderboardLoading(false));
   }, []);
+
+  useEffect(() => {
+    if (loading || !challenges) return;
+
+    const fetchUsage = async () => {
+      try {
+        const { getAndroidUsageStats } = await import('../utils/usageTracker');
+        const stats = await getAndroidUsageStats();
+        
+        const challengeApps = new Set();
+        challenges.forEach(c => c.apps.forEach(app => challengeApps.add(app)));
+        
+        if (challengeApps.size === 0 || stats.length === 0) {
+          setDailyStats({ loading: false, highestApp: null, dailyTotalSeconds: 0 });
+          return;
+        }
+
+        const dailyTracked = stats.filter(stat => challengeApps.has(stat.appName));
+        let maxApp = null;
+        let total = 0;
+        
+        dailyTracked.forEach(stat => {
+          total += stat.secondsUsed;
+          if (!maxApp || stat.secondsUsed > maxApp.secondsUsed) {
+            maxApp = stat;
+          }
+        });
+        
+        setDailyStats({ loading: false, highestApp: maxApp, dailyTotalSeconds: total });
+      } catch(err) {
+        console.error("Failed to fetch daily stats", err);
+        setDailyStats({ loading: false, highestApp: null, dailyTotalSeconds: 0 });
+      }
+    };
+    fetchUsage();
+  }, [challenges, loading]);
 
   const stats = useMemo(() => {
     const active = challenges.filter((c) => c.status === 'active').length;
@@ -119,7 +118,7 @@ const Analytics = () => {
         </div>
       </div>
       
-      {loading ? (
+      {loading || leaderboardLoading ? (
         <div className="py-16 text-center text-slate-500 dark:text-slate-400">Loading analytics...</div>
       ) : (
         <>

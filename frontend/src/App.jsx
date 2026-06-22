@@ -20,6 +20,7 @@ import FloatingNav from './components/FloatingNav';
 import TopNav from './components/TopNav';
 import { authApi, notificationApi } from './api';
 import { getToken, removeToken, setToken } from './auth';
+import { ChallengeProvider } from './context/ChallengeContext';
 
 function App() {
   const [user, setUser] = useState(null);
@@ -176,30 +177,32 @@ function App() {
   }
 
   return (
-    <div className="flex min-h-[100dvh] flex-col bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
-      {user && <TopNav theme={theme} onToggleTheme={toggleTheme} onLogout={handleLogout} />}
-      <div className={`mx-auto flex w-full max-w-6xl flex-1 flex-col px-4 ${user ? 'pt-20 sm:pt-24' : 'py-6'} pb-[calc(env(safe-area-inset-bottom)+6rem)] sm:px-6 lg:px-8`}>
-        <Routes>
-          <Route path="/" element={<Landing user={user} theme={theme} toggleTheme={toggleTheme} />} />
-          <Route path="/login" element={<Login onAuth={handleAuthSuccess} theme={theme} toggleTheme={toggleTheme} />} />
-          <Route path="/register" element={<Register onAuth={handleAuthSuccess} theme={theme} toggleTheme={toggleTheme} />} />
-          <Route path="/invite/:code" element={<InvitePage />} />
-          <Route element={<ProtectedRoute user={user} loading={loading} />}>
-            <Route path="/dashboard" element={<Dashboard user={user} refreshUser={refreshUser} />} />
-            <Route path="/challenges" element={<AllChallenges user={user} />} />
-            <Route path="/create" element={<CreateChallenge user={user} />} />
-            <Route path="/challenge/:code" element={<ChallengeDetails refreshUser={refreshUser} />} />
-            <Route path="/analytics" element={<Analytics />} />
-            <Route path="/leaderboard" element={<Leaderboard />} />
-            <Route path="/notifications" element={<Notifications onUnreadCountChange={setUnreadCount} />} />
-            <Route path="/profile" element={<Profile user={user} onLogout={handleLogout} refreshUser={refreshUser} />} />
-            <Route path="/settings" element={<Settings user={user} />} />
-          </Route>
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+    <ChallengeProvider>
+      <div className="flex min-h-[100dvh] flex-col bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+        {user && <TopNav theme={theme} onToggleTheme={toggleTheme} onLogout={handleLogout} />}
+        <div className={`mx-auto flex w-full max-w-6xl flex-1 flex-col px-4 ${user ? 'pt-20 sm:pt-24' : 'py-6'} pb-[calc(env(safe-area-inset-bottom)+6rem)] sm:px-6 lg:px-8`}>
+          <Routes>
+            <Route path="/" element={<Landing user={user} theme={theme} toggleTheme={toggleTheme} />} />
+            <Route path="/login" element={<Login onAuth={handleAuthSuccess} theme={theme} toggleTheme={toggleTheme} />} />
+            <Route path="/register" element={<Register onAuth={handleAuthSuccess} theme={theme} toggleTheme={toggleTheme} />} />
+            <Route path="/invite/:code" element={<InvitePage />} />
+            <Route element={<ProtectedRoute user={user} loading={loading} />}>
+              <Route path="/dashboard" element={<Dashboard user={user} refreshUser={refreshUser} />} />
+              <Route path="/challenges" element={<AllChallenges user={user} />} />
+              <Route path="/create" element={<CreateChallenge user={user} />} />
+              <Route path="/challenge/:code" element={<ChallengeDetails refreshUser={refreshUser} />} />
+              <Route path="/analytics" element={<Analytics />} />
+              <Route path="/leaderboard" element={<Leaderboard />} />
+              <Route path="/notifications" element={<Notifications onUnreadCountChange={setUnreadCount} />} />
+              <Route path="/profile" element={<Profile user={user} onLogout={handleLogout} refreshUser={refreshUser} />} />
+              <Route path="/settings" element={<Settings user={user} />} />
+            </Route>
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </div>
+        {user && <FloatingNav theme={theme} onToggleTheme={toggleTheme} user={user} onLogout={handleLogout} unreadCount={unreadCount} />}
       </div>
-      {user && <FloatingNav theme={theme} onToggleTheme={toggleTheme} user={user} onLogout={handleLogout} unreadCount={unreadCount} />}
-    </div>
+    </ChallengeProvider>
   );
 }
 
