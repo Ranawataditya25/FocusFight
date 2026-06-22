@@ -128,7 +128,7 @@ const Analytics = () => {
               <StatsCard key={item.title} title={item.title} value={item.value} meta={item.meta} />
             ))}
             <StatsCard 
-              title="Highest usage today" 
+              title="Highest used app today" 
               value={
                 dailyStats.loading ? '...' : 
                 dailyStats.highestApp ? (

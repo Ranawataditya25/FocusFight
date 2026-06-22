@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { notificationApi } from '../api';
 
-const ChallengeGroupCard = ({ group, markRead }) => {
-  const [expanded, setExpanded] = useState(false);
+const ChallengeGroupCard = ({ group, markRead, initialExpanded }) => {
+  const [expanded, setExpanded] = useState(initialExpanded || false);
   const unreadCount = group.notifications.filter((item) => !item.read).length;
 
   return (
@@ -77,6 +77,9 @@ const ChallengeGroupCard = ({ group, markRead }) => {
 const Notifications = ({ onUnreadCountChange }) => {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  const highlightGroup = searchParams.get('highlight');
 
   const fetchNotifications = async () => {
     setLoading(true);
@@ -149,6 +152,7 @@ const Notifications = ({ onUnreadCountChange }) => {
                 key={groupId}
                 group={group}
                 markRead={markRead}
+                initialExpanded={highlightGroup === group.title}
               />
             ))}
           </div>

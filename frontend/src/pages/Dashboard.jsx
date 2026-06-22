@@ -171,7 +171,12 @@ const Dashboard = ({ user, refreshUser }) => {
         const timeAway = Date.now() - backgroundTime;
         console.log("App became active again! Re-fetching stats...");
         
-        const hasPerm = await hasUsagePermission();
+        let hasPerm = await hasUsagePermission();
+        if (!hasPerm) {
+           await new Promise(r => setTimeout(r, 500));
+           hasPerm = await hasUsagePermission();
+        }
+        
         if (!hasPerm) {
            setShowPermissionModal(true);
            if (backgroundTime > 0 && timeAway > 3000) {

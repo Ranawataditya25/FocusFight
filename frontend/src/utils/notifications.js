@@ -10,10 +10,12 @@ export const requestNotificationPermission = async () => {
   }
 };
 
-export const immediateAlert = async (title, body, id = Math.floor(Math.random() * 1000000)) => {
+export const immediateAlert = async (title, body, notificationIdString = null, challengeTitle = null) => {
   try {
     const hasPerm = await requestNotificationPermission();
     if (!hasPerm) return;
+
+    const id = notificationIdString ? hashStringToId(notificationIdString) : Math.floor(Math.random() * 1000000);
 
     await LocalNotifications.schedule({
       notifications: [
@@ -25,7 +27,7 @@ export const immediateAlert = async (title, body, id = Math.floor(Math.random() 
           sound: null,
           attachments: null,
           actionTypeId: '',
-          extra: null,
+          extra: { notificationId: notificationIdString, challengeTitle },
         },
       ],
     });
@@ -62,7 +64,7 @@ export const scheduleChallengeEndAlert = async (challenge) => {
           sound: null,
           attachments: null,
           actionTypeId: '',
-          extra: { challengeId: challenge._id },
+          extra: { challengeInviteCode: challenge.inviteCode },
         },
       ],
     });

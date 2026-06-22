@@ -45,12 +45,20 @@ function App() {
 
       const lastSeenId = localStorage.getItem('ff_last_notification_id');
       if (unreadList.length > 0) {
-        const latestNotification = unreadList[0];
-        if (!lastSeenId || latestNotification._id !== lastSeenId) {
-          localStorage.setItem('ff_last_notification_id', latestNotification._id);
-          if (lastSeenId) {
+        if (!lastSeenId) {
+          localStorage.setItem('ff_last_notification_id', unreadList[0]._id);
+        } else if (unreadList[0]._id !== lastSeenId) {
+          const lastIndex = unreadList.findIndex(n => n._id === lastSeenId);
+          const newItems = lastIndex !== -1 ? unreadList.slice(0, lastIndex) : unreadList.slice(0, 5);
+          
+          if (newItems.length > 0) {
+            localStorage.setItem('ff_last_notification_id', unreadList[0]._id);
             import('./utils/notifications').then(({ immediateAlert }) => {
-              immediateAlert('FocusFight', latestNotification.message);
+              newItems.forEach((n, idx) => {
+                setTimeout(() => {
+                  immediateAlert('FocusFight', n.message, n._id, n.challengeTitle || n?.challenge?.title);
+                }, idx * 500);
+              });
             });
           }
         }
@@ -68,10 +76,25 @@ function App() {
         window.history.back();
       }
     });
+
+    import('@capacitor/local-notifications').then(({ LocalNotifications }) => {
+      LocalNotifications.addListener('localNotificationActionPerformed', (notificationAction) => {
+        const extra = notificationAction.notification.extra;
+        if (extra && extra.challengeTitle) {
+          navigate(`/notifications?highlight=${encodeURIComponent(extra.challengeTitle)}`);
+        } else {
+          navigate('/notifications');
+        }
+      });
+    });
+
     return () => {
       CapacitorApp.removeAllListeners();
+      import('@capacitor/local-notifications').then(({ LocalNotifications }) => {
+        LocalNotifications.removeAllListeners();
+      });
     };
-  }, []);
+  }, [navigate]);
 
   const refreshUser = async () => {
     if (!getToken()) return;
